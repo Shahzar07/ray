@@ -22,6 +22,7 @@ import {
   addNoteSchema,
   bulkActionSchema,
   createLeadSchema,
+  bulkDncSchema,
   dncSchema,
   logCallSchema,
   trialActionSchema,
@@ -497,6 +498,52 @@ export async function addToDnc(input: unknown): Promise<ActionResult> {
     revalidatePath("/settings/dnc");
     touchPaths();
     return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/**
+ * Bulk paste from a spreadsheet or a WhatsApp list. Every number is normalised
+ * before insert, so the list dedupes on the same E.164 value the leads do.
+ */
+export async function bulkAddToDnc(
+  input: unknown,
+): Promise<ActionResult<{ added: number; alreadyThere: number; unreadable: string[] }>> {
+  try {
+    const ctx = await requireSession();
+    await assertCanManageTeam(ctx.user.id, ctx.team.id);
+    const data = bulkDncSchema.parse(input);
+
+    const unreadable: string[] = [];
+    const numbers = new Set<string>();
+    for (const raw of data.text.split(/[\n,;]/)) {
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      const phone = normalisePhone(trimmed);
+      if (phone.e164) numbers.add(phone.e164);
+      else if (unreadable.length < 20) unreadable.push(trimmed);
+    }
+    if (numbers.size === 0) {
+      return { ok: false, error: "None of those lines look like phone numbers." };
+    }
+
+    const before = await db
+      .select({ phone: doNotCall.phone })
+      .from(doNotCall)
+      .where(and(eq(doNotCall.orgId, ctx.org.id), inArray(doNotCall.phone, [...numbers])));
+    const existing = new Set(before.map((r) => r.phone));
+
+    for (const phone of numbers) {
+      await addPhoneToDnc(ctx.org.id, phone, ctx.user.id, data.reason ?? "Bulk import");
+    }
+
+    revalidatePath("/settings/dnc");
+    touchPaths();
+    return {
+      ok: true,
+      data: { added: numbers.size - existing.size, alreadyThere: existing.size, unreadable },
+    };
   } catch (error) {
     return fail(error);
   }

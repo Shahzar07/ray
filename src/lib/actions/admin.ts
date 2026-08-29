@@ -195,6 +195,12 @@ export async function updateOrgSettings(_prev: FormState, formData: FormData): P
         timezone: z.string().min(1).max(64),
         callingWindowStart: z.coerce.number().int().min(0).max(23),
         callingWindowEnd: z.coerce.number().int().min(1).max(24),
+        cadenceEnabled: z
+          .union([z.literal("on"), z.literal("")])
+          .optional()
+          .transform((v) => v === "on"),
+        cadenceMaxAttempts: z.coerce.number().int().min(1).max(50),
+        cadenceWindowDays: z.coerce.number().int().min(1).max(365),
       })
       .refine((v) => v.callingWindowEnd > v.callingWindowStart, {
         message: "The calling window has to end after it starts.",
@@ -239,6 +245,21 @@ export async function upsertCustomField(input: unknown): Promise<FormState> {
     }
     revalidatePath("/settings/fields");
     return { ok: true, message: "Field saved." };
+  } catch (error) {
+    return toState(error);
+  }
+}
+
+export async function restoreCustomField(id: string): Promise<FormState> {
+  try {
+    const ctx = await requireSession();
+    if (ctx.role === "agent") return { ok: false, error: "Only team leads and owners can change fields." };
+    await db
+      .update(customFieldDefs)
+      .set({ isActive: true })
+      .where(and(eq(customFieldDefs.id, id), eq(customFieldDefs.orgId, ctx.org.id)));
+    revalidatePath("/settings/fields");
+    return { ok: true };
   } catch (error) {
     return toState(error);
   }

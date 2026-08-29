@@ -121,6 +121,11 @@ export const organizations = pgTable("organizations", {
   /* Calling window in lead-local time, used by Call Mode queue ordering. */
   callingWindowStart: integer("calling_window_start").notNull().default(9),
   callingWindowEnd: integer("calling_window_end").notNull().default(20),
+  /* Cadence rule applied by the nightly cron: N attempts with no connect
+     across M days marks a lead Lost, so dead numbers leave the queue. */
+  cadenceEnabled: boolean("cadence_enabled").notNull().default(false),
+  cadenceMaxAttempts: integer("cadence_max_attempts").notNull().default(5),
+  cadenceWindowDays: integer("cadence_window_days").notNull().default(14),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -203,3 +203,8 @@ export const runImportSchema = importPreviewSchema.extend({
   duplicateAction: z.enum(["skip", "update"]).default("skip"),
   dncAction: z.enum(["skip", "import_flagged"]).default("skip"),
 });
+
+export const bulkDncSchema = z.object({
+  text: z.string().min(3, "Paste at least one number").max(50_000),
+  reason: z.string().max(300).optional(),
+});
