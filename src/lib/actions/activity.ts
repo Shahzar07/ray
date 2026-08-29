@@ -32,6 +32,34 @@ export async function recordActivity(entry: {
   });
 }
 
+/**
+ * Bulk append — same table, same rule. The importer writes one `import` row
+ * per created lead and a per-lead loop would be thousands of round trips.
+ */
+export async function recordActivities(
+  entries: Array<{
+    leadId: string;
+    userId: string | null;
+    type: ActivityType;
+    body?: string | null;
+    toValue?: unknown;
+  }>,
+): Promise<void> {
+  if (entries.length === 0) return;
+  const CHUNK = 500;
+  for (let i = 0; i < entries.length; i += CHUNK) {
+    await db.insert(activities).values(
+      entries.slice(i, i + CHUNK).map((entry) => ({
+        leadId: entry.leadId,
+        userId: entry.userId,
+        type: entry.type,
+        body: entry.body ? entry.body.slice(0, 4000) : null,
+        toValue: entry.toValue ?? null,
+      })),
+    );
+  }
+}
+
 export async function notify(entry: {
   userId: string;
   type: string;

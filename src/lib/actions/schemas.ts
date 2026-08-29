@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_IMPORT_ROWS } from "@/lib/domain/import";
 
 /** Every input boundary in the app is one of these. Nothing is trusted client-side. */
 
@@ -172,4 +173,33 @@ export const customFieldSchema = z.object({
   fieldType: z.enum(["text", "number", "date", "select", "multiselect", "boolean"]),
   options: z.array(z.string().max(60)).max(40).default([]),
   sortOrder: z.number().int().min(0).max(999).default(0),
+});
+
+/* ------------------------------ Importer ----------------------------- */
+
+/**
+ * The sheet arrives as raw cells plus a mapping, and the server re-derives
+ * every lead field from them. The client's own preview is a convenience; this
+ * is the boundary that decides what actually gets written.
+ */
+const cellSchema = z.string().max(500);
+
+export const importPreviewSchema = z.object({
+  headers: z.array(z.string().max(120)).min(1, "That sheet has no header row").max(80),
+  rows: z
+    .array(z.array(cellSchema).max(80))
+    .min(1, "That sheet has no data rows")
+    .max(MAX_IMPORT_ROWS, `Split the sheet — ${MAX_IMPORT_ROWS.toLocaleString()} rows is the most one import can take`),
+  mapping: z.array(z.string().max(60).nullable()).max(80),
+});
+
+export const runImportSchema = importPreviewSchema.extend({
+  filename: z.string().min(1).max(200),
+  source: leadSourceSchema.default("scraped"),
+  sourceNote: z.string().max(300).optional(),
+  tags: z.array(z.string().min(1).max(40)).max(10).default([]),
+  strategy: z.enum(["single", "round_robin", "by_column"]).default("single"),
+  assignUserIds: z.array(z.string().uuid()).max(50).default([]),
+  duplicateAction: z.enum(["skip", "update"]).default("skip"),
+  dncAction: z.enum(["skip", "import_flagged"]).default("skip"),
 });
