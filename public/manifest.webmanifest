@@ -1,0 +1,13 @@
+{
+  "name": "CallDesk",
+  "short_name": "CallDesk",
+  "description": "Lead management and cold-call tracking for outbound sales teams.",
+  "start_url": "/today",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f8fb",
+  "theme_color": "#5b5bd6",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
