@@ -106,10 +106,13 @@ Only two things from the brief remain, both deliberately left last.
    Ask before adding `next-pwa` — it is outside the brief's stack list.
 
 ### Smaller things worth knowing
-- **`pnpm-lock.yaml` is untracked.** The repo ships `package-lock.json` but every script
-  is `pnpm`. Running `pnpm install` creates a second lockfile. I left it uncommitted
-  rather than silently switching the repo's package manager — worth asking the user
-  which one they want, because shipping both is a real hazard on Vercel.
+- **Two lockfiles, one decision outstanding.** The repo commits `package-lock.json` but
+  every script is `pnpm`, so `pnpm install` drops a `pnpm-lock.yaml` beside it. That is
+  now gitignored, which changes nothing about the build and keeps `package-lock.json`
+  authoritative — Vercel picks the package manager by whichever lockfile it finds, so
+  shipping both is a real hazard. **This is a deferral, not an answer.** If the team
+  wants pnpm (and the scripts suggest they do), delete the ignore rule and
+  `package-lock.json` together in one deliberate commit.
 - The **live Groq path is untested against the real API** — I had no key. The client's
   contract is covered by unit tests with a mocked fetch, and the whole UI was verified
   both with no key (affordances absent) and with an unreachable key (fails gracefully,

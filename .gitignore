@@ -9,3 +9,11 @@ build
 next-env.d.ts
 coverage
 .vercel
+
+# This repo commits package-lock.json, but every script is `pnpm`, so running
+# `pnpm install` drops a second lockfile here. Two lockfiles is a real hazard —
+# Vercel picks the package manager by which one it finds. Ignored so the
+# committed package-lock.json stays authoritative and nothing about the build
+# changes. If the team wants to standardise on pnpm, delete this rule and
+# package-lock.json together, in one deliberate commit.
+pnpm-lock.yaml
