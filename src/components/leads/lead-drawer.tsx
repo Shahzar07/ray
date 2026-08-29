@@ -31,6 +31,7 @@ import { LEAD_SOURCE, TRIAL_LENGTH_DAYS } from "@/lib/domain/constants";
 import { trialAction } from "@/lib/actions/leads";
 import { ActivityTimeline, type TimelineEntry } from "./activity-timeline";
 import { NoteComposer } from "./note-composer";
+import { DraftFollowUp } from "@/components/ai/draft-follow-up";
 import { AssigneeCell, FollowUpCell, InterestCell, StatusCell, type Member } from "./inline-cells";
 
 export type LeadDetail = {
@@ -265,6 +266,7 @@ function DrawerBody({
 
         <TabsContent value="activity" className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-3 outline-none">
           <NoteComposer leadId={lead.id} onSaved={onRefresh} compact />
+          <DraftFollowUp leadId={lead.id} phone={lead.phonePrimary} className="mt-3" />
           <div className="mt-4 border-t border-line pt-2">
             <ActivityTimeline entries={timeline} tz={tz} />
           </div>

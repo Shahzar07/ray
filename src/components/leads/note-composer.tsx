@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { addNote } from "@/lib/actions/leads";
+import { applyNoteSuggestion } from "@/lib/actions/ai";
 import { useDictation } from "@/lib/hooks/use-dictation";
+import { NoteAssist, type AcceptedSuggestion } from "@/components/ai/note-assist";
 
 /**
  * Note box with browser dictation. Web Speech API is free and needs no
@@ -47,6 +49,24 @@ export function NoteComposer({
     });
   }
 
+  /* Everything the caller kept is written through the same guarded action a
+     manual edit uses — the suggestion gets no shortcut into the database. */
+  function applySuggestion(accepted: AcceptedSuggestion) {
+    const body = value.trim();
+    if (!body) return;
+    startTransition(async () => {
+      const result = await applyNoteSuggestion({ leadId, note: body, ...accepted });
+      if (result.ok) {
+        setValue("");
+        toast({ title: "Saved from your note", description: result.message, tone: "success" });
+        onSaved?.();
+        router.refresh();
+      } else {
+        toast({ title: "Not saved", description: result.error, tone: "danger" });
+      }
+    });
+  }
+
   return (
     <div className="space-y-2">
       <div className="relative">
@@ -77,6 +97,8 @@ export function NoteComposer({
           </button>
         )}
       </div>
+
+      <NoteAssist leadId={leadId} note={value} onAccept={applySuggestion} applying={pending} />
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] text-subtle">

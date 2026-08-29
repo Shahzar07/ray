@@ -4,6 +4,7 @@ import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { dailyStats, leads, memberships, organizations, teams } from "@/lib/db/schema";
 import { notify, recordActivities } from "@/lib/actions/activity";
+import { writeBrief } from "@/lib/ai/features";
 
 /**
  * Nightly. Four jobs that all want the day to be over:
@@ -238,23 +239,44 @@ async function writeManagerBriefs(now: Date): Promise<number> {
       .where(and(eq(leads.teamId, row.teamId), eq(leads.isArchived, false)));
 
     const rate = row.dials > 0 ? Math.round((row.answered / row.dials) * 100) : 0;
+    const facts = {
+      team: row.teamName,
+      dials: row.dials,
+      answered: row.answered,
+      connectRatePercent: rate,
+      markedInterested: row.interested,
+      converted: row.converted,
+      trialsEndingWithin48h: pipeline?.endingSoon ?? 0,
+      trialsAwaitingDecision: pipeline?.pending ?? 0,
+      overdueFollowUps: pipeline?.overdue ?? 0,
+    };
+
     const parts = [
       `${row.dials} dials, ${row.answered} answered (${rate}%)`,
       row.interested > 0 ? `${row.interested} marked interested` : null,
       row.converted > 0 ? `${row.converted} converted` : null,
-      pipeline && pipeline.endingSoon > 0 ? `${pipeline.endingSoon} demo weeks end within 48h` : null,
-      pipeline && pipeline.pending > 0 ? `${pipeline.pending} trials awaiting a decision` : null,
-      pipeline && pipeline.overdue > 0 ? `${pipeline.overdue} overdue follow-ups` : null,
+      facts.trialsEndingWithin48h > 0
+        ? `${facts.trialsEndingWithin48h} demo ${facts.trialsEndingWithin48h === 1 ? "week ends" : "weeks end"} within 48h`
+        : null,
+      facts.trialsAwaitingDecision > 0
+        ? `${facts.trialsAwaitingDecision} ${facts.trialsAwaitingDecision === 1 ? "trial is" : "trials are"} awaiting a decision`
+        : null,
+      facts.overdueFollowUps > 0
+        ? `${facts.overdueFollowUps} overdue follow-${facts.overdueFollowUps === 1 ? "up" : "ups"}`
+        : null,
     ].filter(Boolean);
 
+    /* The numbers above are the brief. AI only rewrites the prose around them,
+       and only if it answers in time — a failed or slow call leaves the plain
+       version, which is already correct and complete. */
+    const written = await writeBrief(facts);
+    const title = written.ok
+      ? written.data.headline
+      : `${row.teamName} today: ${row.dials} dials, ${row.converted} converted`;
+    const body = written.ok ? `${written.data.body}\n\n${parts.join(" · ")}` : parts.join(" · ");
+
     for (const manager of managers) {
-      await notify({
-        userId: manager.userId,
-        type: "daily_brief",
-        title: `${row.teamName} today: ${row.dials} dials, ${row.converted} converted`,
-        body: parts.join(" · "),
-        link: "/analytics",
-      });
+      await notify({ userId: manager.userId, type: "daily_brief", title, body, link: "/analytics" });
       sent++;
     }
   }

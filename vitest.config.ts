@@ -12,6 +12,12 @@ export default defineConfig({
     testTimeout: 20_000,
   },
   resolve: {
-    alias: { "@": path.resolve(process.cwd(), "src") },
+    alias: {
+      "@": path.resolve(process.cwd(), "src"),
+      /* `server-only` is a Next.js build-time guard with no runtime module.
+         Vitest runs outside Next, so point it at a stub rather than dropping
+         the marker from the modules it is protecting. */
+      "server-only": path.resolve(process.cwd(), "tests/stubs/server-only.ts"),
+    },
   },
 });

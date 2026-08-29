@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/display";
 import { useDictation } from "@/lib/hooks/use-dictation";
+import { NoteAssist, ObjectionCoach, type AcceptedSuggestion } from "@/components/ai/note-assist";
 import { INTEREST_LEVEL, LEAD_STATUS } from "@/lib/domain/constants";
 import { fmtDate } from "@/lib/domain/dates";
 import type { InterestLevel, LeadStatus } from "@/lib/db/schema";
@@ -76,6 +77,25 @@ export function AnsweredPanel({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  /* Nothing is saved until the caller taps the outcome button, so an accepted
+     suggestion fills this form rather than writing. Same rule as the drawer:
+     confirmed by a tap, never silent. */
+  function applySuggestion(accepted: AcceptedSuggestion) {
+    if (accepted.interestLevel) setInterest(accepted.interestLevel);
+    if (accepted.status) setStatus(accepted.status);
+    if (accepted.followUpAt) {
+      const days = Math.max(
+        0,
+        Math.round((new Date(accepted.followUpAt).getTime() - Date.now()) / 86_400_000),
+      );
+      // Snap onto whichever quick-date chip is closest, so the UI stays honest
+      // about what will actually be saved.
+      const nearest = QUICK_DATES.reduce((best, [, d]) =>
+        Math.abs(d - days) < Math.abs(best - days) ? d : best, QUICK_DATES[0]![1]);
+      setFollowUpDays(nearest);
+    }
+  }
 
   function submit() {
     const followUp =
@@ -165,6 +185,10 @@ export function AnsweredPanel({
             Listening — speak normally, it types as you go.
           </p>
         )}
+        <div className="flex flex-wrap gap-2">
+          <NoteAssist leadId={lead.id} note={note} onAccept={applySuggestion} />
+          <ObjectionCoach leadId={lead.id} />
+        </div>
       </Group>
 
       {/* Follow-up */}
