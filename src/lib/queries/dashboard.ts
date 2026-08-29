@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, count, desc, eq, gte, inArray, isNull, lte, notInArray, or, sql } from "drizzle-orm";
 import { startOfDay, endOfDay, subDays, addDays } from "date-fns";
 import { db } from "@/lib/db/client";
-import { activities, dailyStats, leads, memberships, users } from "@/lib/db/schema";
+import { activities, dailyStats, importBatches, leads, memberships, users } from "@/lib/db/schema";
 import { visibleUserIds } from "@/lib/auth/visibility";
 import { CLOSED_STATUSES, PIPELINE_ORDER } from "@/lib/domain/constants";
 
@@ -257,6 +257,7 @@ export async function getBatchQuality(teamId: string) {
   return db
     .select({
       batchId: leads.sourceBatchId,
+      filename: importBatches.filename,
       total: sql<number>`count(*)::int`,
       connected: sql<number>`count(*) filter (where ${leads.connectsCount} > 0)::int`,
       interested: sql<number>`count(*) filter (where ${leads.interestLevel} in ('hot','warm'))::int`,
@@ -264,10 +265,34 @@ export async function getBatchQuality(teamId: string) {
       wrongNumber: sql<number>`count(*) filter (where ${leads.status} = 'wrong_number')::int`,
     })
     .from(leads)
-    .where(and(eq(leads.teamId, teamId), sql`${leads.sourceBatchId} is not null`))
-    .groupBy(leads.sourceBatchId)
+    .innerJoin(importBatches, eq(importBatches.id, leads.sourceBatchId))
+    .where(eq(leads.teamId, teamId))
+    .groupBy(leads.sourceBatchId, importBatches.filename)
     .orderBy(desc(sql`count(*)`))
     .limit(20);
+}
+
+/**
+ * Demo-week conversion traced back to the sheet the lead came from. A batch
+ * that produces trials but no conversions is a different problem from one
+ * that never produces a trial at all, so both numbers are kept.
+ */
+export async function getTrialConversionByBatch(teamId: string) {
+  return db
+    .select({
+      batchId: leads.sourceBatchId,
+      filename: importBatches.filename,
+      leadCount: sql<number>`count(*)::int`,
+      started: sql<number>`count(*) filter (where ${leads.trialStartedAt} is not null)::int`,
+      converted: sql<number>`count(*) filter (where ${leads.trialStatus} = 'converted')::int`,
+    })
+    .from(leads)
+    .innerJoin(importBatches, eq(importBatches.id, leads.sourceBatchId))
+    .where(eq(leads.teamId, teamId))
+    .groupBy(leads.sourceBatchId, importBatches.filename)
+    .having(sql`count(*) filter (where ${leads.trialStartedAt} is not null) > 0`)
+    .orderBy(desc(sql`count(*) filter (where ${leads.trialStatus} = 'converted')`))
+    .limit(12);
 }
 
 export async function getLostReasons(teamId: string) {
