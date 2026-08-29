@@ -1,0 +1,64 @@
+# Sub-daily schedules for CallDesk's cron routes.
+#
+# Vercel's Hobby plan allows two cron jobs, each at most once a day, so
+# vercel.json carries the nightly rollup and a daily trial sweep and this
+# workflow drives the schedules the brief actually asks for. GitHub Actions
+# is free on public repos and inside the free minutes on private ones, so the
+# $0 constraint holds. Delete this file if you move to Vercel Pro and put all
+# four schedules in vercel.json instead.
+#
+# Two repository secrets are required:
+#   CALLDESK_URL    https://your-deployment.vercel.app
+#   CRON_SECRET     the same value as the deployment's CRON_SECRET
+#
+# GitHub's scheduler is best-effort and can run late under load. Every job is
+# safe to run twice: the aggregation upserts, the transitions are guarded by
+# state, and the notifications de-duplicate per lead per day.
+
+name: CallDesk cron
+
+on:
+  schedule:
+    - cron: "0 * * * *" # trial transitions, hourly
+    - cron: "*/30 * * * *" # overdue follow-up notifications
+    - cron: "0 18 * * *" # nightly rollup, scoring, give-up rule, brief (23:00 PKT)
+    - cron: "0 20 * * 0" # weekly rollup
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which job to run
+        required: true
+        type: choice
+        options: [trials, follow-ups, nightly, weekly]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Work out which job this run is for
+        id: pick
+        run: |
+          case "${{ github.event.schedule }}" in
+            "0 * * * *")     echo "job=trials" >> "$GITHUB_OUTPUT" ;;
+            "*/30 * * * *")  echo "job=follow-ups" >> "$GITHUB_OUTPUT" ;;
+            "0 18 * * *")    echo "job=nightly" >> "$GITHUB_OUTPUT" ;;
+            "0 20 * * 0")    echo "job=weekly" >> "$GITHUB_OUTPUT" ;;
+            *)               echo "job=${{ inputs.job }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Trigger the job
+        env:
+          URL: ${{ secrets.CALLDESK_URL }}
+          SECRET: ${{ secrets.CRON_SECRET }}
+          JOB: ${{ steps.pick.outputs.job }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "::error::Set the CALLDESK_URL and CRON_SECRET repository secrets."
+            exit 1
+          fi
+          code=$(curl -sS --fail-with-body --retry 3 --retry-delay 10 --max-time 300 \
+            -o /tmp/out.json -w '%{http_code}' \
+            -H "Authorization: Bearer $SECRET" \
+            "$URL/api/cron/$JOB")
+          echo "HTTP $code"
+          cat /tmp/out.json
