@@ -35,7 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/display";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { LEAD_SOURCE } from "@/lib/domain/constants";
+import { APP_SHORT_NAME, LEAD_SOURCE } from "@/lib/domain/constants";
 import {
   ASSIGNMENT_STRATEGY,
   IMPORT_FIELDS,
@@ -55,6 +55,9 @@ import { ACCEPTED_EXTENSIONS, parseSheetFile, parsePastedSheet, type Sheet } fro
 export type ImportMember = { id: string; name: string | null; email: string; avatarUrl: string | null };
 export type CustomFieldOption = { key: string; label: string };
 
+/* Storage key kept at the old product name on purpose: it is what is already
+   in people's browsers, and renaming it would silently discard their saved
+   layout the next time they open the page. */
 const MAPPING_STORAGE_KEY = "calldesk:import-mapping";
 const STAGES = ["Upload", "Map columns", "Review", "Done"] as const;
 type Stage = 0 | 1 | 2 | 3;
@@ -814,7 +817,7 @@ function ReviewStep(props: {
             </CardHeader>
             <CardContent className="space-y-4">
               <ChoiceGroup
-                label={`${preview.counts.duplicate} already in CallDesk`}
+                label={`${preview.counts.duplicate} already in ${APP_SHORT_NAME}`}
                 disabled={preview.counts.duplicate === 0}
                 value={props.duplicateAction}
                 onChange={(v) => props.setDuplicateAction(v as DuplicateAction)}

@@ -10,6 +10,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { poolConfig } from "@/lib/db/ssl";
 import { eq } from "drizzle-orm";
 import * as schema from "../src/lib/db/schema";
 import {
@@ -23,7 +24,7 @@ import {
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL must be set to run the permission tests.");
 
-const pool = new Pool({ connectionString: url });
+const pool = new Pool(poolConfig(url));
 const db = drizzle(pool, { schema });
 
 const { organizations, teams, users, memberships, leads, leadVisibilityLinks } = schema;

@@ -8,6 +8,19 @@ import type {
 } from "@/lib/db/schema";
 
 /**
+ * The product name, in one place so renaming it is a one-line change rather
+ * than a hunt through the UI.
+ *
+ * Two forms on purpose. `APP_NAME` is the identity — window titles, the
+ * wordmark, the installed app, anywhere the user is being told what this is.
+ * `APP_SHORT_NAME` is for body copy and chips, where the full name is simply
+ * too long to sit inside a badge without wrapping it ("3 already in
+ * Raynaters Call Desk" reads badly and breaks the layout).
+ */
+export const APP_NAME = "Raynaters Call Desk";
+export const APP_SHORT_NAME = "Call Desk";
+
+/**
  * One colour map for the whole app. Every badge, chart series, kanban column
  * and progress ring reads from here — no ad-hoc colours anywhere else.
  * `tone` maps onto the semantic token pairs defined in globals.css.

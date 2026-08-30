@@ -3,6 +3,7 @@ import { drizzle as drizzlePg, type NodePgDatabase } from "drizzle-orm/node-post
 import { neon } from "@neondatabase/serverless";
 import { Pool } from "pg";
 import { env } from "@/lib/env";
+import { poolConfig } from "./ssl";
 import * as schema from "./schema";
 
 /**
@@ -25,16 +26,18 @@ const isNeon = /neon\.(tech|build)/.test(env.DATABASE_URL);
 
 export type Database = NodePgDatabase<typeof schema>;
 
-const globalForDb = globalThis as unknown as { __calldeskDb?: Database; __calldeskPool?: Pool };
+const globalForDb = globalThis as unknown as { __rayDb?: Database; __rayPool?: Pool };
 
 function createDb(): Database {
   if (isNeon) {
     return drizzleNeon(neon(env.DATABASE_URL), { schema }) as unknown as Database;
   }
   const pool =
-    globalForDb.__calldeskPool ??
+    globalForDb.__rayPool ??
     new Pool({
-      connectionString: env.DATABASE_URL,
+      /* Resolves TLS explicitly. The URL's own sslmode cannot be trusted to do
+         it — see the note in ./ssl.ts; getting this wrong 500s every page. */
+      ...poolConfig(env.DATABASE_URL),
       /* Supabase's free tier has a modest connection ceiling and every
          serverless instance opens its own pool, so keep each one small and
          let idle connections go. */
@@ -42,11 +45,11 @@ function createDb(): Database {
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 10_000,
     });
-  globalForDb.__calldeskPool = pool;
+  globalForDb.__rayPool = pool;
   return drizzlePg(pool, { schema });
 }
 
-export const db: Database = globalForDb.__calldeskDb ?? createDb();
-if (env.NODE_ENV !== "production") globalForDb.__calldeskDb = db;
+export const db: Database = globalForDb.__rayDb ?? createDb();
+if (env.NODE_ENV !== "production") globalForDb.__rayDb = db;
 
 export { schema };

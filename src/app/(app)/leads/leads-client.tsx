@@ -13,6 +13,9 @@ import type { LeadRow } from "@/lib/queries/leads";
 import type { Member } from "@/components/leads/inline-cells";
 import type { Role } from "@/lib/db/schema";
 
+/* Storage key kept at the old product name on purpose: it is what is already
+   in people's browsers, and renaming it would silently discard their saved
+   layout the next time they open the page. */
 const COLUMNS_KEY = "calldesk.leads.columns";
 
 export function LeadsClient({

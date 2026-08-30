@@ -73,8 +73,8 @@ export async function askAI<S extends z.ZodTypeAny>(options: {
         "content-type": "application/json",
         authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
         /* OpenRouter uses these for attribution on its dashboard. */
-        "HTTP-Referer": env.OPENROUTER_SITE_URL ?? "https://calldesk.local",
-        "X-Title": "CallDesk",
+        "HTTP-Referer": env.OPENROUTER_SITE_URL ?? "https://raynaters.local",
+        "X-Title": "Raynaters Call Desk",
       },
       body: JSON.stringify({
         models: aiModels,

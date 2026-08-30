@@ -39,7 +39,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { changeRole, createTeam, deactivateMember, reactivateMember, setTargets } from "@/lib/actions/admin";
 import { createInvite, revokeInvite } from "@/lib/actions/auth";
-import { ROLE } from "@/lib/domain/constants";
+import { APP_SHORT_NAME, ROLE } from "@/lib/domain/constants";
 import { fmtDate, relative } from "@/lib/domain/dates";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/db/schema";
@@ -273,7 +273,7 @@ function InviteDialog({ teamId }: { teamId: string }) {
       </Button>
       <DialogContent
         title="Invite someone"
-        description="CallDesk sends no email — you copy the link and send it however you like."
+        description={`${APP_SHORT_NAME} sends no email — you copy the link and send it however you like.`}
         className="max-w-[440px]"
       >
         {link ? (

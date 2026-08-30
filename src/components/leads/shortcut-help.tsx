@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent } from "@/components/ui/overlays";
 import { Kbd } from "@/components/ui/display";
 
+import { APP_NAME } from "@/lib/domain/constants";
 const GROUPS: Array<{ title: string; items: Array<[string, string]> }> = [
   {
     title: "Anywhere",
@@ -61,7 +62,7 @@ export function ShortcutHelp() {
         <Keyboard />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent title="Keyboard shortcuts" description="CallDesk is built to be driven from the keyboard.">
+        <DialogContent title="Keyboard shortcuts" description={`${APP_NAME} is built to be driven from the keyboard.`}>
           <DialogBody className="pb-5">
             <div className="space-y-5">
               {GROUPS.map((group) => (

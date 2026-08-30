@@ -1,3 +1,4 @@
+import { APP_SHORT_NAME } from "./constants";
 /**
  * Importer vocabulary shared by the client wizard and the server actions.
  *
@@ -126,8 +127,8 @@ export function autoDetectMapping(headers: string[], customFieldKeys: string[] =
 export type RowVerdict = "ready" | "duplicate" | "duplicate_in_file" | "dnc" | "invalid";
 
 export const VERDICT_META: Record<RowVerdict, { label: string; tone: "success" | "warning" | "danger" | "neutral"; blurb: string }> = {
-  ready: { label: "New leads", tone: "success", blurb: "Not in CallDesk yet — these get created." },
-  duplicate: { label: "Already in CallDesk", tone: "warning", blurb: "The phone number matches a lead your org already has." },
+  ready: { label: "New leads", tone: "success", blurb: `Not in ${APP_SHORT_NAME} yet — these get created.` },
+  duplicate: { label: `Already in ${APP_SHORT_NAME}`, tone: "warning", blurb: "The phone number matches a lead your org already has." },
   duplicate_in_file: { label: "Repeated in this sheet", tone: "neutral", blurb: "The same number appears more than once. The first row wins." },
   dnc: { label: "On the do-not-call list", tone: "danger", blurb: "Someone in your org marked this number as do-not-call." },
   invalid: { label: "Can't be imported", tone: "danger", blurb: "No readable name or phone number, so there is nothing to dial." },

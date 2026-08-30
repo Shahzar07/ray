@@ -71,7 +71,7 @@ export async function GET(request: Request) {
   return new Response(`﻿${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="calldesk-leads-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="raynaters-leads-${new Date().toISOString().slice(0, 10)}.csv"`,
     },
   });
 }

@@ -1,4 +1,4 @@
-# Sub-daily schedules for CallDesk's cron routes.
+# Sub-daily schedules for Raynaters Call Desk's cron routes.
 #
 # Vercel's Hobby plan allows two cron jobs, each at most once a day, so
 # vercel.json carries the nightly rollup and a daily trial sweep and this
@@ -8,14 +8,14 @@
 # four schedules in vercel.json instead.
 #
 # Two repository secrets are required:
-#   CALLDESK_URL    https://your-deployment.vercel.app
+#   APP_URL    https://your-deployment.vercel.app
 #   CRON_SECRET     the same value as the deployment's CRON_SECRET
 #
 # GitHub's scheduler is best-effort and can run late under load. Every job is
 # safe to run twice: the aggregation upserts, the transitions are guarded by
 # state, and the notifications de-duplicate per lead per day.
 
-name: CallDesk cron
+name: Raynaters Call Desk cron
 
 on:
   schedule:
@@ -48,12 +48,12 @@ jobs:
 
       - name: Trigger the job
         env:
-          URL: ${{ secrets.CALLDESK_URL }}
+          URL: ${{ secrets.APP_URL }}
           SECRET: ${{ secrets.CRON_SECRET }}
           JOB: ${{ steps.pick.outputs.job }}
         run: |
           if [ -z "$URL" ] || [ -z "$SECRET" ]; then
-            echo "::error::Set the CALLDESK_URL and CRON_SECRET repository secrets."
+            echo "::error::Set the APP_URL and CRON_SECRET repository secrets."
             exit 1
           fi
           code=$(curl -sS --fail-with-body --retry 3 --retry-delay 10 --max-time 300 \

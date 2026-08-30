@@ -1,5 +1,5 @@
 /**
- * Seeds a realistic CallDesk workspace: one org, one team, six people
+ * Seeds a realistic Raynaters Call Desk workspace: one org, one team, six people
  * (owner + team lead + four agents), three import batches and ~240 leads
  * spread across the whole funnel, with call history, trials in flight and
  * 45 days of aggregated stats so every chart has something to draw.
@@ -9,6 +9,7 @@
  */
 import "dotenv/config";
 import { Pool } from "pg";
+import { poolConfig } from "../src/lib/db/ssl";
 import { drizzle } from "drizzle-orm/node-postgres";
 import bcrypt from "bcryptjs";
 import { addDays, subDays, subHours, subMinutes, startOfDay } from "date-fns";
@@ -32,21 +33,21 @@ const {
 const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env first.");
 
-const pool = new Pool({ connectionString: url });
+const pool = new Pool(poolConfig(url));
 const db = drizzle(pool, { schema });
 
 const KEEP = process.argv.includes("--keep");
-const PASSWORD = "calldesk123";
+const PASSWORD = "raynaters123";
 
 /* ------------------------------ Fixtures ----------------------------- */
 
 const PEOPLE = [
-  { name: "Zainab Haider", email: "zainab@calldesk.test", role: "owner" as const, dial: 40, connect: 10 },
-  { name: "Bilal Ahmed", email: "bilal@calldesk.test", role: "team_lead" as const, dial: 60, connect: 14 },
-  { name: "Sara Iqbal", email: "sara@calldesk.test", role: "agent" as const, dial: 70, connect: 16 },
-  { name: "Usman Tariq", email: "usman@calldesk.test", role: "agent" as const, dial: 65, connect: 14 },
-  { name: "Ayesha Noor", email: "ayesha@calldesk.test", role: "agent" as const, dial: 60, connect: 12 },
-  { name: "Hamza Sheikh", email: "hamza@calldesk.test", role: "agent" as const, dial: 55, connect: 11 },
+  { name: "Zainab Haider", email: "zainab@raynaters.test", role: "owner" as const, dial: 40, connect: 10 },
+  { name: "Bilal Ahmed", email: "bilal@raynaters.test", role: "team_lead" as const, dial: 60, connect: 14 },
+  { name: "Sara Iqbal", email: "sara@raynaters.test", role: "agent" as const, dial: 70, connect: 16 },
+  { name: "Usman Tariq", email: "usman@raynaters.test", role: "agent" as const, dial: 65, connect: 14 },
+  { name: "Ayesha Noor", email: "ayesha@raynaters.test", role: "agent" as const, dial: 60, connect: 12 },
+  { name: "Hamza Sheikh", email: "hamza@raynaters.test", role: "agent" as const, dial: 55, connect: 11 },
 ];
 
 const FIRST = ["Ahmed","Fatima","Omar","Hina","Kashif","Nida","Rizwan","Sana","Tariq","Amna","Junaid","Maryam","Salman","Zara","Faisal","Kiran","Adeel","Sadia","Waqas","Noor","Imran","Rabia","Shahid","Areeba","Danish","Mehwish","Asad","Iqra","Bilal","Sidra","Owais","Laiba","Hassan","Anum","Kamran","Sobia","Nadeem","Hira","Yasir","Mahnoor"];
@@ -128,7 +129,7 @@ function phoneFor(country: string, i: number): string {
 /* -------------------------------- Seed ------------------------------- */
 
 async function main() {
-  console.log("→ seeding CallDesk…");
+  console.log("→ seeding Raynaters Call Desk…");
 
   if (!KEEP) {
     await db.execute(

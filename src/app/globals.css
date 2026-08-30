@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------
-   CallDesk design tokens
+   Raynaters Call Desk design tokens
    Neutral slate base + one confident accent (indigo-violet).
    All colours in OKLCH for perceptually even ramps in both themes.
 ------------------------------------------------------------------- */

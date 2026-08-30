@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { archiveCustomField, restoreCustomField, upsertCustomField } from "@/lib/actions/admin";
 import { cn } from "@/lib/utils";
 
+import { APP_SHORT_NAME } from "@/lib/domain/constants";
 type FieldType = "text" | "number" | "date" | "select" | "multiselect" | "boolean";
 
 export type CustomField = {
@@ -74,7 +75,7 @@ export function FieldsPanel({ fields }: { fields: CustomField[] }) {
           <div>
             <CardTitle>Custom fields</CardTitle>
             <CardDescription>
-              Anything this business tracks that CallDesk does not ship with. New fields appear immediately as import
+              Anything this business tracks that {APP_SHORT_NAME} does not ship with. New fields appear immediately as import
               targets and on the lead drawer.
             </CardDescription>
           </div>

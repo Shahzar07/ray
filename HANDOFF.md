@@ -1,4 +1,4 @@
-# CallDesk — build handoff
+# Raynaters Call Desk — build handoff
 
 State of the build, and exactly where to pick it up. Read this before writing code.
 
@@ -127,6 +127,18 @@ Only two things from the brief remain, both deliberately left last.
    Ask before adding `next-pwa` — it is outside the brief's stack list.
 
 ### Smaller things worth knowing
+- **TLS to Supabase is resolved in code, not by the URL** (`src/lib/db/ssl.ts`). This
+  is not a preference — it is a bug fix, and reverting it 500s every page that touches
+  the database. node-postgres merges the parsed connection string *over* the options you
+  pass, so `sslmode=require` in `DATABASE_URL` silently discards any `ssl` object set in
+  code; the chain then gets verified against Node's trust store, which Supabase's
+  self-signed pooler certificate fails with `SELF_SIGNED_CERT_IN_CHAIN`. Stripping
+  `sslmode` alone is not enough either — with neither, the driver yields `ssl: false`,
+  i.e. no TLS, which the pooler refuses. `poolConfig()` does both halves and every pool
+  in the repo goes through it. `tests/db-ssl.test.ts` pins it by asserting on what `pg`
+  actually resolves, not on what we hand it. Set `DATABASE_CA_CERT` (Supabase → Project
+  settings → Database → SSL configuration) to upgrade from encrypted-only to a fully
+  verified chain.
 - **Two lockfiles, one decision outstanding.** The repo commits `package-lock.json` but
   every script is `pnpm`, so `pnpm install` drops a `pnpm-lock.yaml` beside it. That is
   now gitignored, which changes nothing about the build and keeps `package-lock.json`

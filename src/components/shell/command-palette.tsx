@@ -19,6 +19,7 @@ import { StatusBadge } from "@/components/ui/display";
 import { allNavItems } from "./nav-config";
 import type { Role, LeadStatus } from "@/lib/db/schema";
 
+import { APP_NAME } from "@/lib/domain/constants";
 type LeadHit = {
   id: string;
   fullName: string;
@@ -230,7 +231,7 @@ export function CommandPalette({
               open
             </span>
             <span className="ml-auto flex items-center gap-1.5">
-              <PhoneCall className="size-3" /> CallDesk
+              <PhoneCall className="size-3" /> {APP_NAME}
             </span>
           </div>
         </DialogPrimitive.Content>

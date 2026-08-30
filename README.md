@@ -1,4 +1,4 @@
-# CallDesk
+# Raynaters Call Desk
 
 Lead management and cold-call tracking for a small outbound sales team selling an
 **AI Receptionist** product. The sales motion it models: scrape leads → cold call →
@@ -52,7 +52,7 @@ Postgres, and every script. Same Drizzle schema either way.
 `/import` is a first-class feature, not an afterthought: drag-drop CSV/XLSX **or paste
 straight out of Google Sheets**, auto-detected column mapping remembered per user,
 phone normalisation to E.164, and a preview that sorts every row into five buckets —
-new, already in CallDesk, on the do-not-call list, repeated within the sheet, and
+new, already in Call Desk, on the do-not-call list, repeated within the sheet, and
 unusable. The two buckets with a real decision behind them get a choice; the rest
 explain themselves. Assignment is single, round-robin or read from a column, and a
 batch can be undone entirely right up until someone logs a call against its leads.
@@ -102,16 +102,16 @@ link and send it yourself; no email service is needed, which keeps the cost at $
 
 ### Sample logins after `pnpm db:seed`
 
-Password for all of them: `calldesk123`
+Password for all of them: `raynaters123`
 
 | Role | Email |
 | --- | --- |
-| owner | `zainab@calldesk.test` |
-| team_lead | `bilal@calldesk.test` |
-| agent | `sara@calldesk.test` |
-| agent | `usman@calldesk.test` |
-| agent | `ayesha@calldesk.test` |
-| agent | `hamza@calldesk.test` |
+| owner | `zainab@raynaters.test` |
+| team_lead | `bilal@raynaters.test` |
+| agent | `sara@raynaters.test` |
+| agent | `usman@raynaters.test` |
+| agent | `ayesha@raynaters.test` |
+| agent | `hamza@raynaters.test` |
 
 The seed also creates one directional visibility link — Sara can see Usman's leads,
 Usman **cannot** see Sara's — so the asymmetry is visible immediately.
@@ -186,7 +186,7 @@ half-hourly schedules exceed. So there are two ways to run these, and both are $
 - **Out of the box** — `vercel.json` schedules the nightly and trial jobs daily. Nothing
   to configure; the sub-daily jobs simply do not run.
 - **The real schedules** — [`.github/workflows/cron.yml`](./.github/workflows/cron.yml)
-  drives all four on the schedules above. Set the `CALLDESK_URL` and `CRON_SECRET`
+  drives all four on the schedules above. Set the `APP_URL` and `CRON_SECRET`
   repository secrets and it works; delete the file if you move to Vercel Pro and put all
   four schedules in `vercel.json` instead.
 

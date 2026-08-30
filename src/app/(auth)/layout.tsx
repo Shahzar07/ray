@@ -1,6 +1,7 @@
 import { PhoneCall } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 
+import { APP_NAME } from "@/lib/domain/constants";
 /**
  * Split screen: the form on the left, a quiet product panel on the right that
  * collapses away on mobile.
@@ -14,7 +15,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <span className="grid size-8 place-items-center rounded-[10px] bg-accent text-accent-fg shadow-xs edge-light">
               <PhoneCall className="size-[17px]" strokeWidth={2.4} />
             </span>
-            <span className="text-[15px] font-semibold tracking-tight text-strong">CallDesk</span>
+            <span className="text-[15px] font-semibold tracking-tight text-strong">{APP_NAME}</span>
           </div>
           <ThemeToggle />
         </header>

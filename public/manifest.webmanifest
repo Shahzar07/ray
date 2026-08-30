@@ -1,6 +1,6 @@
 {
-  "name": "CallDesk",
-  "short_name": "CallDesk",
+  "name": "Raynaters Call Desk",
+  "short_name": "Call Desk",
   "description": "Lead management and cold-call tracking for outbound sales teams.",
   "start_url": "/today",
   "display": "standalone",

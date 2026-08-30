@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/overlays";
 import type { SessionContext } from "@/lib/auth/session";
 
+import { APP_NAME } from "@/lib/domain/constants";
 export function AppShell({
   ctx,
   notifications,
@@ -107,7 +108,7 @@ export function AppShell({
           <span className="grid size-7 place-items-center rounded-lg bg-accent text-accent-fg">
             <PhoneCall className="size-4" strokeWidth={2.4} />
           </span>
-          <span className="text-[14px] font-semibold tracking-tight text-strong">CallDesk</span>
+          <span className="text-[14px] font-semibold tracking-tight text-strong">{APP_NAME}</span>
         </Link>
         <div className="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="icon-sm" onClick={() => setCommandOpen(true)} aria-label="Search">

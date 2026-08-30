@@ -5,6 +5,7 @@ import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { ImportWizard } from "./import-wizard";
 import { BatchHistory } from "./batch-history";
 
+import { APP_SHORT_NAME } from "@/lib/domain/constants";
 export const metadata: Metadata = { title: "Import" };
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function ImportPage() {
     <>
       <PageHeader
         title="Import"
-        subtitle="Move a scraped sheet into CallDesk — mapped, de-duplicated and assigned in one pass"
+        subtitle={`Move a scraped sheet into ${APP_SHORT_NAME} — mapped, de-duplicated and assigned in one pass`}
       />
       <PageBody className="mx-auto max-w-6xl space-y-6">
         <ImportWizard

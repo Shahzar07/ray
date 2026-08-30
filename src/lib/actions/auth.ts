@@ -60,7 +60,7 @@ export async function signOutAction(): Promise<void> {
 export async function createFirstOwner(_prev: FormState, formData: FormData): Promise<FormState> {
   try {
     const [existing] = await db.select({ id: users.id }).from(users).limit(1);
-    if (existing) return { ok: false, error: "This CallDesk is already set up. Sign in instead." };
+    if (existing) return { ok: false, error: "This workspace is already set up. Sign in instead." };
 
     const data = signupOwnerSchema.parse(Object.fromEntries(formData));
 

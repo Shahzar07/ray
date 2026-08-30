@@ -20,6 +20,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { navForRole } from "./nav-config";
 import type { SessionContext } from "@/lib/auth/session";
 
+import { APP_NAME } from "@/lib/domain/constants";
 export function Sidebar({
   ctx,
   onOpenCommand,
@@ -40,7 +41,7 @@ export function Sidebar({
           <PhoneCall className="size-[17px]" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 leading-tight">
-          <div className="truncate text-[14px] font-semibold tracking-tight text-strong">CallDesk</div>
+          <div className="truncate text-[14px] font-semibold tracking-tight text-strong">{APP_NAME}</div>
           <div className="truncate text-[11px] text-subtle">{ctx.org.name}</div>
         </div>
       </div>
