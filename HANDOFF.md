@@ -34,10 +34,23 @@ The design system is the load-bearing part of this repo. Match it; don't reinven
 Everything in the brief's Phases 1–5 except the two items under "Not built" below.
 
 ### Backend
-Postgres on **Supabase** (transaction pooler for the app on 6543, `DIRECT_URL` on 5432
-for migrations — DDL does not belong on a transaction pooler). Supabase is used purely
+Postgres on **Supabase**, project `ldplldsqjnkyjnbfboiw` ("raynaters dashboard",
+ap-northeast-1, PG 17.6). Transaction pooler on 6543 for the app, `DIRECT_URL` on 5432
+for migrations — DDL does not belong on a transaction pooler. Supabase is used purely
 as Postgres: not its Auth, not its Storage. Neon still works unchanged by swapping
 `DATABASE_URL`; the driver is picked from the URL.
+
+The schema is **applied and verified live**: 17 tables, 12 enums, 41 indexes, 29 foreign
+keys. Its column fingerprint is byte-identical to the local Postgres the app was tested
+against, and Drizzle's own journal is backfilled, so `pnpm db:migrate` is a clean no-op.
+
+**`0002_rls_lockdown` is a security control, not boilerplate.** Supabase exposes every
+`public` table through PostgREST to the `anon` key, which ships in browser bundles.
+Before this migration, `anon` could `SELECT` from `leads` — verified, not theorised.
+RLS enabled with no policies denies anon and authenticated everything; the app is
+unaffected because it connects as `postgres`, which owns the tables and has BYPASSRLS.
+Never "fix" the resulting INFO-level "RLS enabled, no policy" lints by disabling RLS.
+If the Supabase client SDK is ever adopted, add explicit policies instead.
 
 ### Foundation
 - Next.js 15 App Router, TypeScript strict, **no `any` anywhere**.
@@ -99,11 +112,14 @@ client's contract against every failure mode with a mocked fetch — no key need
 
 Only two things from the brief remain, both deliberately left last.
 
-1. **Postgres RLS.** Not applied, and there is no script for it. This got *more*
-   feasible with the move to Supabase: the app now runs on node-postgres, so a
-   `SET LOCAL app.user_id` inside a transaction is available in a way it never was over
-   Neon's HTTP driver. It is still defence in depth, not the primary control — the
-   application layer is the real guard and is the thing with 22 tests behind it.
+1. **Per-user Postgres RLS.** Table-level RLS is now on (see `0002_rls_lockdown`), but
+   that is a blanket deny aimed at the PostgREST surface — it is not per-user row
+   filtering. Real per-user RLS is more feasible than it was on Neon: the app runs on
+   node-postgres, so `SET LOCAL app.user_id` inside a transaction is available where
+   Neon's per-query HTTP connections made it impossible. It would still be defence in
+   depth — `visibleUserIds` is the primary control and the thing with 22 tests behind
+   it. Note the app's role has BYPASSRLS, so per-user policies would need a dedicated
+   non-bypassing role to have any effect.
 
 2. **PWA offline queue.** `manifest.webmanifest` and the icon exist and are linked, so
    the app is installable. `next-pwa` is not installed, and there is no service worker

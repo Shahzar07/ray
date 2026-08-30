@@ -157,6 +157,14 @@ beyond the database itself.
 Drizzle only issues named prepared statements when you call `.prepare()`, which this
 codebase never does, so every query here is compatible with transaction-mode pooling.
 
+**Do not skip `0002_rls_lockdown`.** Supabase serves every `public` table over PostgREST
+to the `anon` key — which is public by design and ships in browser bundles — so without
+it, anyone with that key can read and write your leads straight past the permission
+layer. The migration turns RLS on with no policies, which denies anon and authenticated
+everything. The app connects as `postgres` (owner, BYPASSRLS) and is unaffected. Supabase
+will then report 17 INFO lints saying "RLS enabled, no policy": that is the intended
+state, not a problem to fix.
+
 **Neon works too** — put its pooled string in `DATABASE_URL`, leave `DIRECT_URL` blank,
 and the driver switches to Neon's HTTP transport automatically.
 

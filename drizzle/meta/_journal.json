@@ -15,6 +15,13 @@
       "when": 1788039455661,
       "tag": "0001_magenta_senator_kelly",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788044000000,
+      "tag": "0002_rls_lockdown",
+      "breakpoints": true
     }
   ]
 }
