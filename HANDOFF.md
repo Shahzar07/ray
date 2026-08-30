@@ -146,6 +146,15 @@ Only two things from the brief remain, both deliberately left last.
    or write queue. The brief wants a caller in a weak-signal spot to keep their note.
    Ask before adding `next-pwa` — it is outside the brief's stack list.
 
+- **Migrations run on deploy.** `vercel-build` is `tsx scripts/migrate.ts && next build`,
+  so a schema change ships with the code that needs it. This is not a convenience: the
+  manager/researcher/viewer roles went out ahead of their migration once, and every role
+  change in production failed with `invalid input value for enum role: "manager"`
+  surfaced to the user as "Something went wrong. Try again." `src/lib/actions/db-errors.ts`
+  now translates that class of error into "a migration is pending", and the migration
+  script skips (exit 0) rather than failing when no database is configured, so a build
+  without one still works.
+
 ### Smaller things worth knowing
 - **TLS to Supabase is resolved in code, not by the URL** (`src/lib/db/ssl.ts`). This
   is not a preference — it is a bug fix, and reverting it 500s every page that touches

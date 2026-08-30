@@ -14,7 +14,17 @@ import { poolConfig } from "../src/lib/db/ssl";
  * are the same string and this is a no-op.
  */
 const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env first.");
+
+/**
+ * Runs as part of `vercel-build`, so a missing URL is a skip rather than a
+ * failure: a build with no database configured is a legitimate thing to do
+ * (previews, CI, a first deploy before the env vars are in). A real migration
+ * failure below still exits non-zero and stops the deploy.
+ */
+if (!url) {
+  console.log("• no DATABASE_URL — skipping migrations");
+  process.exit(0);
+}
 
 async function main() {
   const folder = "./drizzle";

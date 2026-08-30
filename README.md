@@ -199,6 +199,17 @@ anything or spam anyone.
 
 ---
 
+## Deploying
+
+`vercel-build` runs `scripts/migrate.ts` before `next build`, so migrations apply as part
+of the deploy and the database never lags the code that depends on it. With no
+`DATABASE_URL` set the migration step skips rather than failing, so builds without a
+database still work.
+
+Targets (`daily_dial_target` / `daily_connect_target`) apply only to team leads and
+agents — the roles that work a book of leads. Everyone else stores zero and the UI shows
+counts instead of a ring that could never fill.
+
 ## Permission model
 
 Six roles, scoped per team. Two independent axes: **what you can do**

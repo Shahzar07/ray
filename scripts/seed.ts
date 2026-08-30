@@ -10,7 +10,7 @@
 import "dotenv/config";
 import { Pool } from "pg";
 import { poolConfig } from "../src/lib/db/ssl";
-import { can } from "../src/lib/domain/roles";
+import { can, hasDailyTargets } from "../src/lib/domain/roles";
 import { drizzle } from "drizzle-orm/node-postgres";
 import bcrypt from "bcryptjs";
 import { addDays, subDays, subHours, subMinutes, startOfDay } from "date-fns";
@@ -171,8 +171,10 @@ async function main() {
       teamId: team!.id,
       userId: u.id,
       role: PEOPLE[i]!.role,
-      dailyDialTarget: PEOPLE[i]!.dial,
-      dailyConnectTarget: PEOPLE[i]!.connect,
+      /* Roles that do not work to a quota store zero, so nothing downstream
+         has to special-case a target that was never meant to apply. */
+      dailyDialTarget: hasDailyTargets(PEOPLE[i]!.role) ? PEOPLE[i]!.dial : 0,
+      dailyConnectTarget: hasDailyTargets(PEOPLE[i]!.role) ? PEOPLE[i]!.connect : 0,
     })),
   );
 
@@ -223,6 +225,9 @@ async function main() {
       options: ["None", "Receptionist", "Answering service", "Voicemail", "Other"],
       sortOrder: 1,
     },
+    { orgId: org!.id, key: "facebook", label: "Facebook", fieldType: "text", sortOrder: 2 },
+    { orgId: org!.id, key: "instagram", label: "Instagram", fieldType: "text", sortOrder: 3 },
+    { orgId: org!.id, key: "linkedin", label: "LinkedIn", fieldType: "text", sortOrder: 4 },
     { orgId: org!.id, key: "decision_maker", label: "Spoke to decision maker", fieldType: "boolean", sortOrder: 2 },
   ]);
 
@@ -338,12 +343,14 @@ async function main() {
 
     const first = pick(FIRST);
     const last = pick(LAST);
+    const company = `${pick(COMPANY_PREFIX)} ${pick(COMPANY_KIND)}`;
+    const handle = company.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
     leadRows.push({
       orgId: org!.id,
       teamId: team!.id,
       fullName: `${first} ${last}`,
-      company: `${pick(COMPANY_PREFIX)} ${pick(COMPANY_KIND)}`,
+      company,
       jobTitle: pick(TITLES),
       phonePrimary: phoneFor(country, i),
       email: chance(0.55) ? `${first.toLowerCase()}@${pick(COMPANY_PREFIX).toLowerCase().replace(/\s/g, "")}.com` : null,
@@ -374,7 +381,15 @@ async function main() {
       lastConnectedAt: connects > 0 ? lastAttemptedAt : null,
       score: Math.round(Math.min(98, Math.max(6, quality * 60 + (interest === "hot" ? 30 : interest === "warm" ? 15 : 0) + intBetween(-8, 8)))),
       tags: pickN(TAGS, intBetween(0, 3)),
-      customFields: { branches: intBetween(1, 5), decision_maker: chance(0.5) },
+      customFields: {
+        branches: intBetween(1, 5),
+        decision_maker: chance(0.5),
+        /* The socials a scraped sheet usually carries — these exist so the
+           lead drawer's custom-field section has something to show. */
+        ...(chance(0.6) ? { facebook: `facebook.com/${handle}` } : {}),
+        ...(chance(0.4) ? { instagram: `instagram.com/${handle}` } : {}),
+        ...(chance(0.3) ? { linkedin: `linkedin.com/company/${handle}` } : {}),
+      },
       createdAt,
       updatedAt: lastAttemptedAt ?? createdAt,
     });

@@ -19,6 +19,7 @@ import { EmptyState, ProgressRing, SectionTitle, Sparkline, StatTile } from "@/c
 import { LeadQueueCard } from "@/components/today/lead-queue-card";
 import { fmt } from "@/lib/domain/dates";
 import { pctValue } from "@/lib/utils";
+import { hasDailyTargets } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -38,6 +39,9 @@ export default async function TodayPage() {
   const queue =
     board.overdue.length + board.dueToday.length + board.trialsPending.length + board.trialsEnding.length;
   const connectRate = pctValue(progress.answered, progress.dials);
+  /* Owners, managers, researchers and viewers are not working to a quota, so
+     they get the counts without a ring that could never fill. */
+  const showTargets = hasDailyTargets(ctx.role);
 
   return (
     <>
@@ -58,19 +62,25 @@ export default async function TodayPage() {
         {/* Targets */}
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="flex items-center gap-4 rounded-xl border border-line bg-surface p-4 shadow-xs">
-            <ProgressRing
-              value={progress.dials}
-              max={ctx.dailyDialTarget}
-              size={62}
-              label={progress.dials}
-              sublabel={`/ ${ctx.dailyDialTarget}`}
-            />
+            {showTargets ? (
+              <ProgressRing
+                value={progress.dials}
+                max={ctx.dailyDialTarget}
+                size={62}
+                label={progress.dials}
+                sublabel={`/ ${ctx.dailyDialTarget}`}
+              />
+            ) : (
+              <Count value={progress.dials} />
+            )}
             <div className="min-w-0">
               <p className="text-[11.5px] font-medium uppercase tracking-wide text-subtle">Dials today</p>
               <p className="mt-1 text-[13px] text-body">
-                {progress.dials >= ctx.dailyDialTarget
-                  ? "Target hit. Anything now is upside."
-                  : `${ctx.dailyDialTarget - progress.dials} to go`}
+                {!showTargets
+                  ? "Logged across your own calls"
+                  : progress.dials >= ctx.dailyDialTarget
+                    ? "Target hit. Anything now is upside."
+                    : `${ctx.dailyDialTarget - progress.dials} to go`}
               </p>
               <div className="mt-2">
                 <Sparkline data={trend} width={84} height={18} />
@@ -79,14 +89,18 @@ export default async function TodayPage() {
           </div>
 
           <div className="flex items-center gap-4 rounded-xl border border-line bg-surface p-4 shadow-xs">
-            <ProgressRing
-              value={progress.answered}
-              max={ctx.dailyConnectTarget}
-              size={62}
-              tone="success"
-              label={progress.answered}
-              sublabel={`/ ${ctx.dailyConnectTarget}`}
-            />
+            {showTargets ? (
+              <ProgressRing
+                value={progress.answered}
+                max={ctx.dailyConnectTarget}
+                size={62}
+                tone="success"
+                label={progress.answered}
+                sublabel={`/ ${ctx.dailyConnectTarget}`}
+              />
+            ) : (
+              <Count value={progress.answered} />
+            )}
             <div className="min-w-0">
               <p className="text-[11.5px] font-medium uppercase tracking-wide text-subtle">Connects today</p>
               <p className="mt-1 text-[13px] text-body">
@@ -249,5 +263,14 @@ function Section({
         </div>
       )}
     </section>
+  );
+}
+
+/** The same visual weight as a ProgressRing, without implying a target. */
+function Count({ value }: { value: number }) {
+  return (
+    <div className="grid size-[62px] shrink-0 place-items-center rounded-full bg-inset text-[19px] font-semibold tabular-nums text-strong">
+      {value}
+    </div>
   );
 }

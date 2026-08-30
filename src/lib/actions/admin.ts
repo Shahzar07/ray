@@ -14,9 +14,11 @@ import {
 } from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth/session";
 import { assertCan, PermissionError } from "@/lib/auth/visibility";
+import { pendingMigrationMessage } from "./db-errors";
 import { customFieldSchema, roleSchema, targetsSchema, visibilityLinkSchema } from "./schemas";
 import type { FormState } from "./auth";
-import { can } from "@/lib/domain/roles";
+import { can, hasDailyTargets } from "@/lib/domain/roles";
+import { ROLE } from "@/lib/domain/constants";
 
 function toState(error: unknown): FormState {
   if (error instanceof z.ZodError) {
@@ -27,6 +29,11 @@ function toState(error: unknown): FormState {
     };
   }
   if (error instanceof PermissionError) return { ok: false, error: error.message };
+  const pending = pendingMigrationMessage(error);
+  if (pending) {
+    console.error("[admin-action] pending migration:", error);
+    return { ok: false, error: pending };
+  }
   console.error("[admin-action]", error);
   return { ok: false, error: "Something went wrong. Try again." };
 }
@@ -133,6 +140,9 @@ export async function setTargets(input: unknown): Promise<FormState> {
     const [membership] = await db.select().from(memberships).where(eq(memberships.id, data.membershipId)).limit(1);
     if (!membership) return { ok: false, error: "That member is no longer on the team." };
     await assertCan(ctx.user.id, membership.teamId, "members.manage");
+    if (!hasDailyTargets(membership.role)) {
+      return { ok: false, error: `A ${ROLE[membership.role].label.toLowerCase()} does not work to a daily target.` };
+    }
 
     await db
       .update(memberships)

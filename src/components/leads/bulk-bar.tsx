@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Archive, CalendarClock, Ban, Tag, UserRound, X, CircleDot } from "lucide-react";
+import { Archive, CalendarClock, Ban, Tag, Trash2, UserRound, X, CircleDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/controls";
@@ -13,12 +13,16 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/overlays";
 import { useToast } from "@/components/ui/toast";
-import { bulkUpdate } from "@/lib/actions/leads";
+import { bulkUpdate, deleteLeads } from "@/lib/actions/leads";
 import { LEAD_STATUS } from "@/lib/domain/constants";
 import { plural } from "@/lib/utils";
 import type { LeadStatus } from "@/lib/db/schema";
@@ -40,6 +44,7 @@ export function BulkBar({
   const { toast } = useToast();
   const [pending, startTransition] = React.useTransition();
   const [tagValue, setTagValue] = React.useState("");
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
   const ids = React.useMemo(() => [...selected], [selected]);
 
   if (ids.length === 0) return null;
@@ -202,11 +207,65 @@ export function BulkBar({
           </Button>
         )}
 
+        {canManage && (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={pending}
+            className="text-danger-text hover:bg-danger-soft"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 />
+            Delete
+          </Button>
+        )}
+
         <span className="mx-1 h-5 w-px shrink-0 bg-line" />
         <Button variant="ghost" size="icon-sm" onClick={onClear} aria-label="Clear selection">
           <X />
         </Button>
       </div>
+
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent
+          title={`Delete ${plural(ids.length, "lead")}?`}
+          description="This removes the leads and their whole call history. It cannot be undone."
+        >
+          <DialogBody>
+            <p className="text-[13px] text-subtle">
+              If you only want them out of the way, close this and use{" "}
+              <span className="font-medium text-strong">Archive</span> instead — archived leads stop
+              appearing in queues but keep their history.
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className="bg-danger text-danger-fg hover:bg-danger/90"
+              disabled={pending}
+              onClick={() => {
+                startTransition(async () => {
+                  const result = await deleteLeads({ leadIds: ids });
+                  setConfirmDelete(false);
+                  if (result.ok) {
+                    toast({ title: `Deleted ${plural(result.data?.deleted ?? ids.length, "lead")}`, tone: "success" });
+                    onClear();
+                    router.refresh();
+                  } else {
+                    toast({ title: "Nothing deleted", description: result.error, tone: "danger" });
+                  }
+                });
+              }}
+            >
+              <Trash2 />
+              Delete permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

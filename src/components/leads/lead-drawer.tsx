@@ -12,14 +12,28 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  MoreHorizontal,
   PhoneCall,
   Rocket,
   Tag,
+  Trash2,
   TrendingUp,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, Hint } from "@/components/ui/overlays";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Sheet,
+  SheetContent,
+  Hint,
+} from "@/components/ui/overlays";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Avatar } from "@/components/ui/controls";
@@ -28,7 +42,7 @@ import { useToast } from "@/components/ui/toast";
 import { formatPhone, telHref, whatsAppHref } from "@/lib/domain/phone";
 import { fmtDate, fmtDateTime, relative, trialDay, daysUntil, leadLocalHour } from "@/lib/domain/dates";
 import { LEAD_SOURCE, TRIAL_LENGTH_DAYS } from "@/lib/domain/constants";
-import { trialAction } from "@/lib/actions/leads";
+import { deleteLeads, trialAction } from "@/lib/actions/leads";
 import { ActivityTimeline, type TimelineEntry } from "./activity-timeline";
 import { NoteComposer } from "./note-composer";
 import { DraftFollowUp } from "@/components/ai/draft-follow-up";
@@ -67,6 +81,8 @@ export type LeadDetail = {
   assignedTo: string | null;
   assigneeName: string | null;
   createdAt: string;
+  /** Mapped custom fields, already joined to their labels by the API. */
+  custom?: { key: string; label: string; value: string }[];
 };
 
 export type DuplicateWarning = { userName: string | null; at: string } | null;
@@ -159,6 +175,7 @@ function DrawerBody({
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = React.useTransition();
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const localHour = leadLocalHour(lead.timezone);
   const day = lead.trialStartedAt ? trialDay(lead.trialStartedAt) : null;
@@ -195,9 +212,26 @@ function DrawerBody({
               )}
             </p>
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
-            <X />
-          </Button>
+          <div className="flex items-center gap-1">
+            {canReassign && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" aria-label="More actions">
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem destructive onSelect={() => setConfirmDelete(true)}>
+                    <Trash2 />
+                    Delete lead
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+              <X />
+            </Button>
+          </div>
         </div>
 
         {/* Primary actions */}
@@ -454,11 +488,79 @@ function DrawerBody({
               )}
             </Row>
             <Row label="Added">{fmtDate(lead.createdAt, tz)}</Row>
+
+            {/* Whatever this org tracks beyond the built-in fields — website,
+                socials, anything mapped during an import. */}
+            {lead.custom?.map((field) => (
+              <Row key={field.key} label={field.label}>
+                {isLink(field.value) ? (
+                  <a
+                    href={hrefFor(field.value)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-accent-text hover:underline"
+                  >
+                    {field.value.replace(/^https?:\/\//, "")}
+                  </a>
+                ) : (
+                  field.value
+                )}
+              </Row>
+            ))}
           </dl>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent
+          title={`Delete ${lead.fullName}?`}
+          description="This removes the lead and its whole call history. It cannot be undone."
+        >
+          <DialogBody>
+            <p className="text-[13px] text-subtle">
+              To keep the record but take it out of the queues, close this and use{" "}
+              <span className="font-medium text-strong">Archive</span> instead.
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className="bg-danger text-danger-fg hover:bg-danger/90"
+              disabled={pending}
+              onClick={() => {
+                startTransition(async () => {
+                  const result = await deleteLeads({ leadIds: [lead.id] });
+                  setConfirmDelete(false);
+                  if (result.ok) {
+                    toast({ title: `${lead.fullName} deleted`, tone: "success" });
+                    onClose();
+                    router.refresh();
+                  } else {
+                    toast({ title: "Nothing deleted", description: result.error, tone: "danger" });
+                  }
+                });
+              }}
+            >
+              <Trash2 />
+              Delete permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
+}
+
+/** A value worth making clickable: a URL, or a bare domain/handle from a sheet. */
+function isLink(value: string): boolean {
+  return /^https?:\/\//i.test(value) || /^(www\.|[\w-]+\.[a-z]{2,})/i.test(value);
+}
+
+function hrefFor(value: string): string {
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 }
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {

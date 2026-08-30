@@ -44,7 +44,7 @@ import { fmtDate, relative } from "@/lib/domain/dates";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/db/schema";
 import { FormAlert } from "../settings-ui";
-import { assignableRoles, can } from "@/lib/domain/roles";
+import { assignableRoles, can, hasDailyTargets } from "@/lib/domain/roles";
 
 export type PanelMember = {
   userId: string;
@@ -159,11 +159,19 @@ export function MembersPanel({
                 </p>
               </div>
 
+              {/* Only the roles that work a book of leads are paced by a
+                  target; a quota against an owner or a researcher is noise. */}
               <div className="hidden text-right lg:block">
-                <p className="text-[12.5px] tabular-nums text-body">
-                  {member.dailyDialTarget}/{member.dailyConnectTarget}
-                </p>
-                <p className="text-[11.5px] text-subtle">dials / connects</p>
+                {hasDailyTargets(member.role) ? (
+                  <>
+                    <p className="text-[12.5px] tabular-nums text-body">
+                      {member.dailyDialTarget}/{member.dailyConnectTarget}
+                    </p>
+                    <p className="text-[11.5px] text-subtle">dials / connects</p>
+                  </>
+                ) : (
+                  <p className="text-[11.5px] text-subtle">no daily target</p>
+                )}
               </div>
 
               {!can(viewerRole, "members.manage") ? (
@@ -191,10 +199,12 @@ export function MembersPanel({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onSelect={() => setTargetsFor(member)}>
-                      <Target />
-                      Daily targets
-                    </DropdownMenuItem>
+                    {hasDailyTargets(member.role) && (
+                      <DropdownMenuItem onSelect={() => setTargetsFor(member)}>
+                        <Target />
+                        Daily targets
+                      </DropdownMenuItem>
+                    )}
                     {can(viewerRole, "org.admin") && member.userId !== viewerId && (
                       <DropdownMenuItem
                         destructive={member.isActive}

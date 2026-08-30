@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ROLES, assignableRoles, can, rolesWith, visibilityScope } from "@/lib/domain/roles";
+import {
+  ROLES,
+  assignableRoles,
+  can,
+  hasDailyTargets,
+  rolesWith,
+  visibilityScope,
+} from "@/lib/domain/roles";
 
 /**
  * Invariants over the capability table itself. No database — these catch a
@@ -76,5 +83,33 @@ describe("the capability matrix", () => {
     expect(assignableRoles("agent")).toEqual([]);
     expect(assignableRoles("viewer")).toEqual([]);
     expect(assignableRoles("researcher")).toEqual([]);
+  });
+});
+
+describe("daily targets", () => {
+  it("applies only to the roles that work a book of leads", () => {
+    expect(ROLES.filter(hasDailyTargets)).toEqual(["team_lead", "agent"]);
+  });
+
+  it("never targets a role that cannot log a call", () => {
+    for (const role of ROLES) {
+      if (hasDailyTargets(role)) expect(can(role, "calls.log")).toBe(true);
+    }
+  });
+});
+
+describe("pending-migration errors", () => {
+  it("explains an enum value the database has never heard of", async () => {
+    const { pendingMigrationMessage } = await import("@/lib/actions/db-errors");
+    // Exactly what production raised when the roles shipped ahead of the migration.
+    const error = Object.assign(new Error('Failed query: update "memberships" set "role" = $1'), {
+      cause: new Error('invalid input value for enum role: "manager"'),
+    });
+    expect(pendingMigrationMessage(error)).toMatch(/migration is pending/);
+  });
+
+  it("leaves an ordinary failure alone", async () => {
+    const { pendingMigrationMessage } = await import("@/lib/actions/db-errors");
+    expect(pendingMigrationMessage(new Error("connection reset"))).toBeNull();
   });
 });

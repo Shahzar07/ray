@@ -128,6 +128,19 @@ export function visibilityScope(role: Role): VisibilityScope {
 }
 
 /**
+ * Whether a daily dial/connect target means anything for this role.
+ *
+ * Targets exist to pace the people doing the calling, and only team leads and
+ * agents work a book of leads. An owner or manager who picks up the phone
+ * occasionally is not working to a quota, and showing them a permanently
+ * unmet ring on /today reads as failure rather than as "not your job".
+ * Researchers and viewers never call at all.
+ */
+export function hasDailyTargets(role: Role): boolean {
+  return role === "team_lead" || role === "agent";
+}
+
+/**
  * Roles a given role may hand out. Nobody can promote someone above
  * themselves, and only an owner can mint another owner.
  */

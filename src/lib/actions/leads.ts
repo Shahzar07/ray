@@ -15,6 +15,7 @@ import {
   visibleUserIds,
 } from "@/lib/auth/visibility";
 import { normalisePhone } from "@/lib/domain/phone";
+import { pendingMigrationMessage } from "./db-errors";
 import { TRIAL_LENGTH_DAYS } from "@/lib/domain/constants";
 import { TRIAL_TASKS } from "@/lib/domain/trials";
 import { changedFields, notify, recordActivity } from "./activity";
@@ -22,6 +23,7 @@ import { can } from "@/lib/domain/roles";
 import {
   addNoteSchema,
   bulkActionSchema,
+  deleteLeadsSchema,
   createLeadSchema,
   bulkDncSchema,
   dncSchema,
@@ -42,6 +44,11 @@ function fail(error: unknown): ActionResult<never> {
       error: error.issues[0]?.message ?? "Check the form and try again.",
       fieldErrors: error.flatten().fieldErrors as Record<string, string[]>,
     };
+  }
+  const pending = pendingMigrationMessage(error);
+  if (pending) {
+    console.error("[lead-action] pending migration:", error);
+    return { ok: false, error: pending };
   }
   if (error instanceof Error && /leads_org_phone_uq/.test(error.message)) {
     return { ok: false, error: "A lead with that phone number already exists in this org." };
@@ -425,6 +432,39 @@ export async function bulkUpdate(input: unknown): Promise<ActionResult<{ affecte
 
     touchPaths();
     return { ok: true, data: { affected: targets.length } };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/**
+ * Permanently removes leads. Activities, trials and visibility rows go with
+ * them via `on delete cascade`.
+ *
+ * Kept out of `bulkUpdate` on purpose. Every other bulk action is reversible,
+ * so `bulkUpdate` lets an agent act on their own leads; this one is not, and
+ * requires `leads.manageAll` from everybody. Archiving stays the soft option
+ * and is what the UI offers first.
+ */
+export async function deleteLeads(input: unknown): Promise<ActionResult<{ deleted: number }>> {
+  try {
+    const ctx = await requireSession();
+    await assertCanManageTeam(ctx.user.id, ctx.team.id);
+    const data = deleteLeadsSchema.parse(input);
+
+    /* Re-derive the ids from the team rather than trusting the posted list —
+       the same rule every other lead mutation follows. */
+    const rows = await db
+      .select({ id: leads.id })
+      .from(leads)
+      .where(and(eq(leads.teamId, ctx.team.id), inArray(leads.id, data.leadIds)));
+    if (rows.length === 0) return { ok: false, error: "Those leads are not yours to delete." };
+
+    const ids = rows.map((r) => r.id);
+    await db.delete(leads).where(inArray(leads.id, ids));
+
+    touchPaths();
+    return { ok: true, data: { deleted: ids.length } };
   } catch (error) {
     return fail(error);
   }

@@ -92,6 +92,13 @@ export const bulkActionSchema = z.object({
   nextFollowUpAt: isoDate.nullable().optional(),
 });
 
+/* Deliberately separate from bulkActionSchema: deleting is the one bulk
+   operation that cannot be undone, so it gets its own action and its own
+   guard rather than becoming another case in a switch. */
+export const deleteLeadsSchema = z.object({
+  leadIds: z.array(z.string().uuid()).min(1).max(500),
+});
+
 export const trialActionSchema = z.object({
   leadId: z.string().uuid(),
   action: z.enum(["schedule", "start", "convert", "churn", "cancel"]),
