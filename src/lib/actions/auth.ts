@@ -12,7 +12,7 @@ import { db } from "@/lib/db/client";
 import { invites, memberships, organizations, teams, users } from "@/lib/db/schema";
 import { hashPassword, signIn, signOut } from "@/lib/auth";
 import { requireSession } from "@/lib/auth/session";
-import { assertCanManageTeam, PermissionError } from "@/lib/auth/visibility";
+import { assertCan, PermissionError } from "@/lib/auth/visibility";
 import { acceptInviteSchema, inviteSchema, passwordSchema, profileSchema, signupOwnerSchema } from "./schemas";
 
 export type FormState = { ok: boolean; error?: string; fieldErrors?: Record<string, string[]>; message?: string };
@@ -98,7 +98,7 @@ export async function createInvite(input: unknown): Promise<FormState & { url?: 
   try {
     const ctx = await requireSession();
     const data = inviteSchema.parse(input);
-    await assertCanManageTeam(ctx.user.id, data.teamId);
+    await assertCan(ctx.user.id, data.teamId, "members.manage");
 
     const email = data.email.trim().toLowerCase();
     const [already] = await db
@@ -131,7 +131,7 @@ export async function revokeInvite(id: string): Promise<FormState> {
     const ctx = await requireSession();
     const [invite] = await db.select().from(invites).where(eq(invites.id, id)).limit(1);
     if (!invite) return { ok: false, error: "That invite is already gone." };
-    await assertCanManageTeam(ctx.user.id, invite.teamId);
+    await assertCan(ctx.user.id, invite.teamId, "members.manage");
     await db.delete(invites).where(eq(invites.id, id));
     revalidatePath("/settings/team");
     return OK;

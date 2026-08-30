@@ -172,6 +172,7 @@ export function FilterBar({
   total,
   onNewLead,
   canManage,
+  canExport,
 }: {
   members: Member[];
   tags: string[];
@@ -180,6 +181,8 @@ export function FilterBar({
   total: number;
   onNewLead: () => void;
   canManage: boolean;
+  /** The route 403s without it, so do not offer the button. */
+  canExport: boolean;
 }) {
   const { params, set, toggle } = useLeadFilters();
   const searchRef = React.useRef<HTMLInputElement>(null);
@@ -370,12 +373,14 @@ export function FilterBar({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant="secondary" size="sm" asChild>
-            <a href={exportHref} download aria-label="Export current view as CSV">
-              <Download />
-              <span className="hidden sm:inline">Export</span>
-            </a>
-          </Button>
+          {canExport && (
+            <Button variant="secondary" size="sm" asChild>
+              <a href={exportHref} download aria-label="Export current view as CSV">
+                <Download />
+                <span className="hidden sm:inline">Export</span>
+              </a>
+            </Button>
+          )}
 
           {canManage && (
             <Button variant="primary" size="sm" onClick={onNewLead}>

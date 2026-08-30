@@ -129,8 +129,21 @@ export const ACTIVITY_TYPE: Record<ActivityType, Meta> = {
 
 export const ROLE: Record<Role, Meta> = {
   owner: { label: "Owner", tone: "accent" },
+  manager: { label: "Manager", tone: "accent" },
   team_lead: { label: "Team lead", tone: "info" },
   agent: { label: "Agent", tone: "neutral" },
+  researcher: { label: "Researcher", tone: "info" },
+  viewer: { label: "Viewer", tone: "neutral" },
+} as const;
+
+/** Shown under each option in the role picker, so nobody has to guess. */
+export const ROLE_BLURB: Record<Role, string> = {
+  owner: "Everything, including billing-level actions: creating teams, making other owners, deactivating people.",
+  manager: "Runs the operation across every team. Same powers as an owner, minus the ability to change who owns the account.",
+  team_lead: "Full control of their own team — its leads, its settings and its people.",
+  agent: "Calls their own leads and logs the outcomes. Sees peers' leads only where you grant it.",
+  researcher: "Builds the lists: imports sheets, curates fields and the do-not-call register. Does not call, and sees no performance figures.",
+  viewer: "Read-only. Can watch the pipeline and the numbers, and change nothing.",
 };
 
 export const LEAD_SOURCE = {

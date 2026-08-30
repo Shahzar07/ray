@@ -5,6 +5,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { memberships, organizations, teams, users, type Role } from "@/lib/db/schema";
 import { auth } from "./index";
+import { can, type Capability } from "@/lib/domain/roles";
 
 export type SessionContext = {
   user: { id: string; name: string; email: string; timezone: string; avatarUrl: string | null };
@@ -81,9 +82,18 @@ export async function requireSession(): Promise<SessionContext> {
   return ctx;
 }
 
-export async function requireTeamManager(): Promise<SessionContext> {
+/**
+ * Gate a page on one capability, sending anyone without it back to /today.
+ *
+ * Was `requireTeamManager`, which stopped being an honest name once "manager"
+ * became an actual role distinct from the check being made. Defaults to lead
+ * management, which is what every caller meant by it before.
+ */
+export async function requireCapability(
+  capability: Capability = "leads.manageAll",
+): Promise<SessionContext> {
   const ctx = await requireSession();
-  if (ctx.role === "agent") redirect("/today");
+  if (!can(ctx.role, capability)) redirect("/today");
   return ctx;
 }
 

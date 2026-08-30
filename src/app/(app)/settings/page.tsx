@@ -8,13 +8,14 @@ import { getStorageUsage } from "@/lib/queries/settings";
 import { PageBody } from "@/components/shell/app-shell";
 import { GeneralForm } from "./general-form";
 import { StorageCard } from "./storage-card";
+import { can } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
 
 export default async function GeneralSettingsPage() {
   const ctx = await requireSession();
-  if (ctx.role === "agent") redirect("/settings/profile");
+  if (!can(ctx.role, "team.settings")) redirect("/settings/profile");
 
   const [[org], usage] = await Promise.all([
     db.select().from(organizations).where(eq(organizations.id, ctx.org.id)).limit(1),

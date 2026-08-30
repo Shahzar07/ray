@@ -43,8 +43,8 @@ Postgres, and every script. Same Drizzle schema either way.
 | `/board` | everyone | Kanban across the open pipeline. Drag, or use the Back/Forward buttons on touch. |
 | `/trials` | everyone | The demo-week tracker: five columns, a day-track per active trial, 48-hour and stalled-decision alerts, conversion by caller and by source sheet. |
 | `/analytics` | everyone | Funnel, dials by caller, connect-rate trend, best calling hours, source-sheet quality, lost reasons, and the leaderboard. Every chart has a table view. |
-| `/team` | lead + owner | Sortable per-member performance, drill-through to anyone's leads, and two heatmaps — when the team calls vs. when people answer. |
-| `/import` | lead + owner | The migration path off Sheets. See below. |
+| `/team` | `team.performance` | Sortable per-member performance, drill-through to anyone's leads, and two heatmaps — when the team calls vs. when people answer. |
+| `/import` | `leads.import` | The migration path off Sheets. See below. |
 | `/settings` | mixed | Org and calling window, team and the visibility matrix, custom fields, do-not-call list, your profile. Agents see only their profile. |
 
 ### The importer
@@ -107,11 +107,14 @@ Password for all of them: `raynaters123`
 | Role | Email |
 | --- | --- |
 | owner | `zainab@raynaters.test` |
+| manager | `imran@raynaters.test` |
 | team_lead | `bilal@raynaters.test` |
 | agent | `sara@raynaters.test` |
 | agent | `usman@raynaters.test` |
 | agent | `ayesha@raynaters.test` |
 | agent | `hamza@raynaters.test` |
+| researcher | `mehak@raynaters.test` |
+| viewer | `adnan@raynaters.test` |
 
 The seed also creates one directional visibility link — Sara can see Usman's leads,
 Usman **cannot** see Sara's — so the asymmetry is visible immediately.
@@ -198,13 +201,24 @@ anything or spam anyone.
 
 ## Permission model
 
-Three roles, scoped per team:
+Six roles, scoped per team. Two independent axes: **what you can do**
+(`can(role, capability)`) and **whose leads you can see** (`visibilityScope(role)`),
+both defined as data in [`src/lib/domain/roles.ts`](./src/lib/domain/roles.ts).
 
-- **`owner`** — everything, across every team in the org.
-- **`team_lead`** — every lead belonging to any member of their team; can import,
-  bulk-assign, reassign and delete within that team.
-- **`agent`** — only leads assigned to them, plus any user they hold an explicit
-  `lead_visibility_links` row for.
+| Role | Sees | Can do |
+| --- | --- | --- |
+| **`owner`** | whole org | Everything, including the irreversible parts: creating teams, making other owners, deactivating people. |
+| **`manager`** | whole org | Everything operational across every team — import, reassign, delete, settings, people. Cannot change who owns the account. |
+| **`team_lead`** | own team | The same powers as a manager, confined to one team. |
+| **`agent`** | own leads | Calls their own leads and logs outcomes. Sees a peer's leads only where a link grants it, and read-only even then. |
+| **`researcher`** | own team | Builds the lists: imports sheets, curates custom fields and the do-not-call register. Never calls, and sees nobody's performance figures. |
+| **`viewer`** | own team | Read-only, including no CSV export — a spreadsheet of every lead is not "viewing". |
+
+Permissions are a table rather than a set of comparisons for a specific reason. The app
+used to ask `role !== "agent"` wherever it meant "is this a manager?", which was true
+with three roles and became a hole the moment there were six: under that test a
+read-only viewer would have been handed bulk delete. Adding a seventh role is now a row
+in `CAPABILITIES`, not a hunt for comparisons that quietly changed meaning.
 
 **Visibility is asymmetric.** A team lead seeing an agent's leads grants that agent
 nothing in return, and cross-visibility between two agents needs an explicit link

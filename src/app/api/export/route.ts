@@ -1,4 +1,5 @@
 import { requireSession } from "@/lib/auth/session";
+import { can } from "@/lib/domain/roles";
 import { listLeads, type LeadFilters, type PresetKey } from "@/lib/queries/leads";
 import { LEAD_STATUS } from "@/lib/domain/constants";
 import type { InterestLevel, LeadStatus, TrialStatus } from "@/lib/db/schema";
@@ -21,6 +22,11 @@ function cell(value: unknown): string {
 /** CSV of exactly the view the user is looking at — same filters, same rows. */
 export async function GET(request: Request) {
   const ctx = await requireSession();
+  /* A viewer sees the pipeline on screen; handing them a CSV of every lead is
+     a different act, so it is a separate capability. */
+  if (!can(ctx.role, "leads.export")) {
+    return new Response("You do not have permission to export leads.", { status: 403 });
+  }
   const params = new URL(request.url).searchParams;
 
   const filters: LeadFilters = {

@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth/session";
 import { getDncCount, getDncList } from "@/lib/queries/settings";
 import { PageBody } from "@/components/shell/app-shell";
 import { DncPanel } from "./dnc-panel";
+import { can } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "Do-not-call" };
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function DncSettingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const ctx = await requireSession();
-  if (ctx.role === "agent") redirect("/settings/profile");
+  if (!can(ctx.role, "data.curate")) redirect("/settings/profile");
 
   const params = await searchParams;
   const search = typeof params.q === "string" ? params.q : "";

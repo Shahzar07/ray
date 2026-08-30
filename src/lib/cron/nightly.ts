@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 import { dailyStats, leads, memberships, organizations, teams } from "@/lib/db/schema";
 import { notify, recordActivities } from "@/lib/actions/activity";
 import { writeBrief } from "@/lib/ai/features";
+import { rolesWith } from "@/lib/domain/roles";
 
 /**
  * Nightly. Four jobs that all want the day to be over:
@@ -226,7 +227,7 @@ async function writeManagerBriefs(now: Date): Promise<number> {
     const managers = await db
       .select({ userId: memberships.userId })
       .from(memberships)
-      .where(and(eq(memberships.teamId, row.teamId), inArray(memberships.role, ["owner", "team_lead"])));
+      .where(and(eq(memberships.teamId, row.teamId), inArray(memberships.role, rolesWith("leads.manageAll"))));
     if (managers.length === 0) continue;
 
     const [pipeline] = await db
@@ -315,7 +316,7 @@ export async function runWeeklyRollup(now = new Date()) {
     const managers = await db
       .select({ userId: memberships.userId })
       .from(memberships)
-      .where(and(eq(memberships.teamId, team.id), inArray(memberships.role, ["owner", "team_lead"])));
+      .where(and(eq(memberships.teamId, team.id), inArray(memberships.role, rolesWith("leads.manageAll"))));
 
     for (const manager of managers) {
       await notify({

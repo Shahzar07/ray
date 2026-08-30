@@ -14,6 +14,7 @@ import { poolConfig } from "@/lib/db/ssl";
 import { eq } from "drizzle-orm";
 import * as schema from "../src/lib/db/schema";
 import {
+  assertCan,
   assertCanEditLead,
   assertCanManageTeam,
   leadAccess,
@@ -39,6 +40,9 @@ type Fixture = {
   sara: string; // agent, team A
   usman: string; // agent, team A — Sara can see him, he cannot see Sara
   hina: string; // agent, team A — unlinked to everyone
+  manager: string; // manager, team A — org-wide reach, no org administration
+  researcher: string; // researcher, team A — sees the team, calls nobody
+  viewer: string; // viewer, team A — read-only
   outsider: string; // team lead of a different org
   leads: Record<string, string>;
 };
@@ -79,6 +83,9 @@ beforeAll(async () => {
   const sara = await makeUser("sara");
   const usman = await makeUser("usman");
   const hina = await makeUser("hina");
+  const manager = await makeUser("manager");
+  const researcher = await makeUser("researcher");
+  const viewer = await makeUser("viewer");
   const bTeamAgent = await makeUser("bagent");
   const outsider = await makeUser("outsider");
 
@@ -88,6 +95,9 @@ beforeAll(async () => {
     { teamId: a!.id, userId: sara, role: "agent" },
     { teamId: a!.id, userId: usman, role: "agent" },
     { teamId: a!.id, userId: hina, role: "agent" },
+    { teamId: a!.id, userId: manager, role: "manager" },
+    { teamId: a!.id, userId: researcher, role: "researcher" },
+    { teamId: a!.id, userId: viewer, role: "viewer" },
     { teamId: b!.id, userId: bTeamAgent, role: "agent" },
     { teamId: outsideTeam!.id, userId: outsider, role: "team_lead" },
   ]);
@@ -110,6 +120,9 @@ beforeAll(async () => {
     sara,
     usman,
     hina,
+    manager,
+    researcher,
+    viewer,
     outsider,
     leads: {
       sara: await makeLead(org!.id, a!.id, sara, "Sara's lead"),
@@ -126,7 +139,17 @@ afterAll(async () => {
   if (f) {
     await db.delete(organizations).where(eq(organizations.id, f.orgId));
     await db.delete(organizations).where(eq(organizations.id, f.otherOrgId));
-    for (const id of [f.owner, f.leadA, f.sara, f.usman, f.hina, f.outsider]) {
+    for (const id of [
+      f.owner,
+      f.leadA,
+      f.sara,
+      f.usman,
+      f.hina,
+      f.manager,
+      f.researcher,
+      f.viewer,
+      f.outsider,
+    ]) {
       await db.delete(users).where(eq(users.id, id));
     }
   }
@@ -253,5 +276,90 @@ describe("assertCanManageTeam", () => {
 
   it("allows an owner anywhere in their org", async () => {
     await expect(assertCanManageTeam(f.owner, f.teamB, db)).resolves.toBe("owner");
+  });
+});
+
+/**
+ * The roles added after launch. These matter more than their number suggests:
+ * before capabilities existed the app decided "is this a manager?" by asking
+ * `role !== "agent"`, and under that test a read-only viewer would have been
+ * handed bulk delete. Several of these are that exact regression.
+ */
+describe("manager", () => {
+  it("sees every member of every team, like an owner", async () => {
+    const ids = await visibleUserIds(f.manager, f.teamA, db);
+    expect(ids).toContain(f.sara);
+    expect(ids).toContain(f.owner);
+    // Team B is a different team in the same org — org scope reaches it.
+    const teamBIds = await visibleUserIds(f.manager, f.teamB, db);
+    expect(teamBIds).toContain(f.sara);
+  });
+
+  it("manages a team it was never added to", async () => {
+    await expect(assertCan(f.manager, f.teamB, "leads.manageAll", db)).resolves.toBe("manager");
+  });
+
+  it("edits, reassigns and deletes anyone's lead", async () => {
+    const access = await leadAccess(f.manager, f.leads.sara!, db);
+    expect(access).toMatchObject({ canView: true, canEdit: true, canDelete: true, canReassign: true });
+  });
+
+  it("cannot administer the organisation — that is the whole point of the role", async () => {
+    await expect(assertCan(f.manager, f.teamA, "org.admin", db)).rejects.toBeInstanceOf(PermissionError);
+  });
+
+  it("still cannot reach another organisation", async () => {
+    expect(await visibleUserIds(f.manager, f.outsider, db)).toEqual([]);
+  });
+});
+
+describe("researcher", () => {
+  it("sees the whole team, because deduping a list needs to", async () => {
+    const ids = await visibleUserIds(f.researcher, f.teamA, db);
+    expect(ids).toContain(f.sara);
+    expect(ids).toContain(f.usman);
+  });
+
+  it("may import", async () => {
+    await expect(assertCan(f.researcher, f.teamA, "leads.import", db)).resolves.toBe("researcher");
+  });
+
+  it("sees a lead and cannot touch it", async () => {
+    const access = await leadAccess(f.researcher, f.leads.sara!, db);
+    expect(access.canView).toBe(true);
+    expect(access.canEdit).toBe(false);
+    expect(access.canDelete).toBe(false);
+    await expect(assertCanEditLead(f.researcher, f.leads.sara!, db)).rejects.toBeInstanceOf(PermissionError);
+  });
+
+  it("cannot bulk-manage leads, despite not being an agent", async () => {
+    // The `role !== "agent"` regression, stated directly.
+    await expect(assertCanManageTeam(f.researcher, f.teamA, db)).rejects.toBeInstanceOf(PermissionError);
+  });
+});
+
+describe("viewer", () => {
+  it("sees the team's leads", async () => {
+    const access = await leadAccess(f.viewer, f.leads.sara!, db);
+    expect(access.canView).toBe(true);
+  });
+
+  it("can change nothing at all", async () => {
+    const access = await leadAccess(f.viewer, f.leads.sara!, db);
+    expect(access).toMatchObject({ canEdit: false, canDelete: false, canReassign: false });
+    await expect(assertCanEditLead(f.viewer, f.leads.sara!, db)).rejects.toBeInstanceOf(PermissionError);
+  });
+
+  it("cannot bulk-manage, import or export", async () => {
+    // Each of these would have been granted by the old `role !== "agent"` test.
+    await expect(assertCanManageTeam(f.viewer, f.teamA, db)).rejects.toBeInstanceOf(PermissionError);
+    await expect(assertCan(f.viewer, f.teamA, "leads.import", db)).rejects.toBeInstanceOf(PermissionError);
+    await expect(assertCan(f.viewer, f.teamA, "leads.export", db)).rejects.toBeInstanceOf(PermissionError);
+  });
+
+  it("cannot edit even a lead assigned to nobody", async () => {
+    const access = await leadAccess(f.viewer, f.leads.unassigned!, db);
+    expect(access.canView).toBe(true);
+    expect(access.canEdit).toBe(false);
   });
 });

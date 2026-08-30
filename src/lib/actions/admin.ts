@@ -13,9 +13,10 @@ import {
   users,
 } from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth/session";
-import { assertCanManageTeam, PermissionError } from "@/lib/auth/visibility";
+import { assertCan, PermissionError } from "@/lib/auth/visibility";
 import { customFieldSchema, roleSchema, targetsSchema, visibilityLinkSchema } from "./schemas";
 import type { FormState } from "./auth";
+import { can } from "@/lib/domain/roles";
 
 function toState(error: unknown): FormState {
   if (error instanceof z.ZodError) {
@@ -40,7 +41,7 @@ export async function grantVisibility(input: unknown): Promise<FormState> {
   try {
     const ctx = await requireSession();
     const data = visibilityLinkSchema.parse(input);
-    await assertCanManageTeam(ctx.user.id, data.teamId);
+    await assertCan(ctx.user.id, data.teamId, "members.manage");
     if (data.viewerUserId === data.targetUserId) {
       return { ok: false, error: "Everyone already sees their own leads." };
     }
@@ -59,7 +60,7 @@ export async function revokeVisibility(input: unknown): Promise<FormState> {
   try {
     const ctx = await requireSession();
     const data = visibilityLinkSchema.parse(input);
-    await assertCanManageTeam(ctx.user.id, data.teamId);
+    await assertCan(ctx.user.id, data.teamId, "members.manage");
     await db
       .delete(leadVisibilityLinks)
       .where(
@@ -103,10 +104,10 @@ export async function changeRole(input: unknown): Promise<FormState> {
 
     const [membership] = await db.select().from(memberships).where(eq(memberships.id, data.membershipId)).limit(1);
     if (!membership) return { ok: false, error: "That member is no longer on the team." };
-    await assertCanManageTeam(ctx.user.id, membership.teamId);
+    await assertCan(ctx.user.id, membership.teamId, "members.manage");
 
     // Only an owner may mint another owner, and the last owner cannot step down.
-    if (data.role === "owner" && ctx.role !== "owner") {
+    if (data.role === "owner" && !can(ctx.role, "org.admin")) {
       return { ok: false, error: "Only an owner can make someone else an owner." };
     }
     if (membership.role === "owner" && data.role !== "owner") {
@@ -131,7 +132,7 @@ export async function setTargets(input: unknown): Promise<FormState> {
     const data = targetsSchema.parse(input);
     const [membership] = await db.select().from(memberships).where(eq(memberships.id, data.membershipId)).limit(1);
     if (!membership) return { ok: false, error: "That member is no longer on the team." };
-    await assertCanManageTeam(ctx.user.id, membership.teamId);
+    await assertCan(ctx.user.id, membership.teamId, "members.manage");
 
     await db
       .update(memberships)
@@ -147,7 +148,7 @@ export async function setTargets(input: unknown): Promise<FormState> {
 export async function deactivateMember(userId: string): Promise<FormState> {
   try {
     const ctx = await requireSession();
-    if (ctx.role !== "owner") return { ok: false, error: "Only an owner can deactivate someone." };
+    if (!can(ctx.role, "org.admin")) return { ok: false, error: "Only an owner can deactivate someone." };
     if (userId === ctx.user.id) return { ok: false, error: "You cannot deactivate yourself." };
     await db.update(users).set({ isActive: false }).where(eq(users.id, userId));
     revalidatePath("/settings/team");
@@ -160,7 +161,7 @@ export async function deactivateMember(userId: string): Promise<FormState> {
 export async function reactivateMember(userId: string): Promise<FormState> {
   try {
     const ctx = await requireSession();
-    if (ctx.role !== "owner") return { ok: false, error: "Only an owner can do that." };
+    if (!can(ctx.role, "org.admin")) return { ok: false, error: "Only an owner can do that." };
     await db.update(users).set({ isActive: true }).where(eq(users.id, userId));
     revalidatePath("/settings/team");
     return { ok: true };
@@ -172,7 +173,7 @@ export async function reactivateMember(userId: string): Promise<FormState> {
 export async function createTeam(_prev: FormState, formData: FormData): Promise<FormState> {
   try {
     const ctx = await requireSession();
-    if (ctx.role !== "owner") return { ok: false, error: "Only an owner can create teams." };
+    if (!can(ctx.role, "org.admin")) return { ok: false, error: "Only an owner can create teams." };
     const name = z.string().min(1).max(120).parse(formData.get("name"));
     const [team] = await db.insert(teams).values({ orgId: ctx.org.id, name }).returning();
     await db.insert(memberships).values({ teamId: team!.id, userId: ctx.user.id, role: "owner" });
@@ -188,7 +189,7 @@ export async function createTeam(_prev: FormState, formData: FormData): Promise<
 export async function updateOrgSettings(_prev: FormState, formData: FormData): Promise<FormState> {
   try {
     const ctx = await requireSession();
-    if (ctx.role === "agent") return { ok: false, error: "Only team leads and owners can change this." };
+    if (!can(ctx.role, "team.settings")) return { ok: false, error: "You cannot change team settings." };
     const data = z
       .object({
         name: z.string().min(1).max(120),
@@ -221,7 +222,7 @@ export async function updateOrgSettings(_prev: FormState, formData: FormData): P
 export async function upsertCustomField(input: unknown): Promise<FormState> {
   try {
     const ctx = await requireSession();
-    if (ctx.role === "agent") return { ok: false, error: "Only team leads and owners can change fields." };
+    if (!can(ctx.role, "data.curate")) return { ok: false, error: "You cannot change custom fields." };
     const data = customFieldSchema.parse(input);
 
     if (data.id) {
@@ -253,7 +254,7 @@ export async function upsertCustomField(input: unknown): Promise<FormState> {
 export async function restoreCustomField(id: string): Promise<FormState> {
   try {
     const ctx = await requireSession();
-    if (ctx.role === "agent") return { ok: false, error: "Only team leads and owners can change fields." };
+    if (!can(ctx.role, "data.curate")) return { ok: false, error: "You cannot change custom fields." };
     await db
       .update(customFieldDefs)
       .set({ isActive: true })
@@ -268,7 +269,7 @@ export async function restoreCustomField(id: string): Promise<FormState> {
 export async function archiveCustomField(id: string): Promise<FormState> {
   try {
     const ctx = await requireSession();
-    if (ctx.role === "agent") return { ok: false, error: "Only team leads and owners can change fields." };
+    if (!can(ctx.role, "data.curate")) return { ok: false, error: "You cannot change custom fields." };
     await db
       .update(customFieldDefs)
       .set({ isActive: false })

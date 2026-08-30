@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { subDays } from "date-fns";
-import { requireTeamManager } from "@/lib/auth/session";
+import type { Role } from "@/lib/db/schema";
+import { requireCapability } from "@/lib/auth/session";
 import { getActivityHeatmap, getTeamPerformance } from "@/lib/queries/dashboard";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { RangeFilter } from "@/components/charts/range-filter";
@@ -18,7 +19,7 @@ export default async function TeamPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const ctx = await requireTeamManager();
+  const ctx = await requireCapability("team.performance");
   const params = await searchParams;
   const range = parseRange(params.days);
   const days = rangeDays(range);
@@ -72,7 +73,7 @@ export default async function TeamPage({
             userId: row.userId,
             name: row.name,
             avatarUrl: row.avatarUrl,
-            role: row.role as "owner" | "team_lead" | "agent",
+            role: row.role as Role,
             dials: row.dials,
             answered: row.answered,
             interested: row.interested,

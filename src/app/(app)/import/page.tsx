@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireTeamManager, teamMembers } from "@/lib/auth/session";
+import { requireCapability, teamMembers } from "@/lib/auth/session";
 import { getImportBatches, getMappableCustomFields } from "@/lib/queries/import";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { ImportWizard } from "./import-wizard";
@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Import" };
 export const dynamic = "force-dynamic";
 
 export default async function ImportPage() {
-  const ctx = await requireTeamManager();
+  const ctx = await requireCapability("leads.import");
   const [members, customFields, batches] = await Promise.all([
     teamMembers(ctx.team.id),
     getMappableCustomFields(ctx.org.id),

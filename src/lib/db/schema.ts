@@ -18,7 +18,14 @@ import { relations, sql } from "drizzle-orm";
 /* Enums                                                               */
 /* ------------------------------------------------------------------ */
 
-export const roleEnum = pgEnum("role", ["owner", "team_lead", "agent"]);
+export const roleEnum = pgEnum("role", [
+  "owner",
+  "manager",
+  "team_lead",
+  "agent",
+  "researcher",
+  "viewer",
+]);
 
 export const leadStatusEnum = pgEnum("lead_status", [
   "new",

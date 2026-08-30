@@ -44,6 +44,7 @@ import { fmtDate, relative } from "@/lib/domain/dates";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/db/schema";
 import { FormAlert } from "../settings-ui";
+import { assignableRoles, can } from "@/lib/domain/roles";
 
 export type PanelMember = {
   userId: string;
@@ -119,11 +120,11 @@ export function MembersPanel({
           <div>
             <CardTitle>Members</CardTitle>
             <CardDescription>
-              Roles decide reach: an owner sees the whole org, a team lead sees this team, an agent sees only their
-              own leads plus anything granted below.
+              Roles decide both reach and power. Owners and managers see the whole org; team leads, researchers
+              and viewers see this team; agents see only their own leads plus anything granted below.
             </CardDescription>
           </div>
-          <InviteDialog teamId={teamId} />
+          <InviteDialog teamId={teamId} viewerRole={viewerRole} />
         </CardHeader>
 
         <ul className="divide-y divide-[var(--line)] border-t border-line">
@@ -165,7 +166,7 @@ export function MembersPanel({
                 <p className="text-[11.5px] text-subtle">dials / connects</p>
               </div>
 
-              {viewerRole === "agent" ? (
+              {!can(viewerRole, "members.manage") ? (
                 <RoleBadge role={member.role} />
               ) : (
                 <Select value={member.role} onValueChange={(v) => updateRole(member, v as Role)} disabled={pending}>
@@ -173,7 +174,7 @@ export function MembersPanel({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(ROLE) as Role[]).map((role) => (
+                    {assignableRoles(viewerRole).map((role) => (
                       <SelectItem key={role} value={role}>
                         {ROLE[role].label}
                       </SelectItem>
@@ -182,7 +183,7 @@ export function MembersPanel({
                 </Select>
               )}
 
-              {viewerRole !== "agent" && (
+              {can(viewerRole, "members.manage") && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon-sm" aria-label={`More for ${member.name ?? member.email}`}>
@@ -194,7 +195,7 @@ export function MembersPanel({
                       <Target />
                       Daily targets
                     </DropdownMenuItem>
-                    {viewerRole === "owner" && member.userId !== viewerId && (
+                    {can(viewerRole, "org.admin") && member.userId !== viewerId && (
                       <DropdownMenuItem
                         destructive={member.isActive}
                         onSelect={() => toggleActive(member)}
@@ -233,7 +234,7 @@ export function MembersPanel({
 
 /* ------------------------------- Invites ----------------------------- */
 
-function InviteDialog({ teamId }: { teamId: string }) {
+function InviteDialog({ teamId, viewerRole }: { teamId: string; viewerRole: Role }) {
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
@@ -310,7 +311,7 @@ function InviteDialog({ teamId }: { teamId: string }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(ROLE) as Role[]).map((role) => (
+                    {assignableRoles(viewerRole).map((role) => (
                       <SelectItem key={role} value={role}>
                         {ROLE[role].label}
                       </SelectItem>

@@ -64,6 +64,23 @@ If the Supabase client SDK is ever adopted, add explicit policies instead.
 - `pnpm db:migrate` and `pnpm db:seed` both work; seed produces a realistic funnel with
   45 days of `daily_stats` so the charts have data.
 
+### Roles and capabilities
+Six roles: `owner`, `manager`, `team_lead`, `agent`, `researcher`, `viewer`.
+`src/lib/domain/roles.ts` holds both axes as data — `CAPABILITIES` (what you may do)
+and `visibilityScope` (whose leads you may see) — and is client-safe, so the UI and the
+server gate on the same table.
+
+**Never reintroduce a bare role comparison.** The app previously used
+`role !== "agent"` to mean "is a manager", which silently became wrong when roles that
+are neither agents nor managers arrived; a viewer would have inherited bulk delete.
+Ask `can(role, capability)`. `tests/roles.test.ts` pins the table's invariants without
+touching a database, and `tests/visibility.test.ts` pins the new roles against real
+Postgres — including the three cases that regression would have produced.
+
+Adding a role: add it to the enum + a migration, add its row to `CAPABILITIES`, give it
+a `visibilityScope`, a `ROLE` label and a `ROLE_BLURB`. TypeScript makes all but the
+migration compile errors until you do.
+
 ### Permission layer — the security core
 `src/lib/auth/visibility.ts` is the single entry point: `visibleUserIds()`,
 `leadAccess()`, `assertCanEditLead()`, `assertCanViewLead()`, `assertCanManageTeam()`.
@@ -90,6 +107,9 @@ target server-side from the same table the UI offered.
 | `/team` | Sortable performance table, drill-through, two activity heatmaps |
 | `/import` | Full wizard: upload/paste → map → review → done, with batch undo |
 | `/settings` | General, Team & access + visibility matrix, fields, DNC, profile |
+
+Each screen and settings tab names the capability that opens it, so the tab strip and
+the page guard cannot drift apart.
 
 ### Cron
 Four routes under `/api/cron/*`, all behind a constant-time `CRON_SECRET` check that

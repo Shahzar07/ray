@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_IMPORT_ROWS } from "@/lib/domain/import";
+import { ROLES } from "@/lib/domain/roles";
 
 /** Every input boundary in the app is one of these. Nothing is trusted client-side. */
 
@@ -30,7 +31,8 @@ export const callOutcomeSchema = z.enum([
   "hung_up",
   "gatekeeper",
 ]);
-export const roleSchema = z.enum(["owner", "team_lead", "agent"]);
+/* Mirrors the `role` enum in the database. ROLES is the single list. */
+export const roleSchema = z.enum(ROLES);
 export const leadSourceSchema = z.enum(["scraped", "referral", "inbound", "ad", "other"]);
 
 const isoDate = z

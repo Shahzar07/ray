@@ -12,6 +12,7 @@ import { ShortcutHelp } from "@/components/leads/shortcut-help";
 import type { LeadRow } from "@/lib/queries/leads";
 import type { Member } from "@/components/leads/inline-cells";
 import type { Role } from "@/lib/db/schema";
+import { can } from "@/lib/domain/roles";
 
 /* Storage key kept at the old product name on purpose: it is what is already
    in people's browsers, and renaming it would silently discard their saved
@@ -42,7 +43,8 @@ export function LeadsClient({
   const [columns, setColumns] = React.useState<ColumnKey[]>(DEFAULT_COLUMNS);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [newLeadOpen, setNewLeadOpen] = React.useState(false);
-  const canManage = role !== "agent";
+  const canManage = can(role, "leads.manageAll");
+  const canExport = can(role, "leads.export");
 
   /* Column choice is a personal preference, so it lives in the browser. */
   React.useEffect(() => {
@@ -90,6 +92,7 @@ export function LeadsClient({
           total={total}
           onNewLead={() => setNewLeadOpen(true)}
           canManage={canManage}
+          canExport={canExport}
         />
       </PageHeader>
 

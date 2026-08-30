@@ -5,13 +5,14 @@ import { getPendingInvites, getRoster, getTeamsInOrg, getVisibilityGrants } from
 import { PageBody } from "@/components/shell/app-shell";
 import { MembersPanel, TeamsPanel } from "./members-panel";
 import { VisibilityMatrix } from "./visibility-matrix";
+import { can } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "Team & access" };
 export const dynamic = "force-dynamic";
 
 export default async function TeamSettingsPage() {
   const ctx = await requireSession();
-  if (ctx.role === "agent") redirect("/settings/profile");
+  if (!can(ctx.role, "members.manage")) redirect("/settings/profile");
 
   const [roster, invites, grants, teams] = await Promise.all([
     getRoster(ctx.team.id),
@@ -54,7 +55,7 @@ export default async function TeamSettingsPage() {
           }))}
       />
 
-      {ctx.role === "owner" && <TeamsPanel teams={teams} activeTeamId={ctx.team.id} />}
+      {can(ctx.role, "org.admin") && <TeamsPanel teams={teams} activeTeamId={ctx.team.id} />}
     </PageBody>
   );
 }

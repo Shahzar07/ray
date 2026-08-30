@@ -10,6 +10,7 @@
 import "dotenv/config";
 import { Pool } from "pg";
 import { poolConfig } from "../src/lib/db/ssl";
+import { can } from "../src/lib/domain/roles";
 import { drizzle } from "drizzle-orm/node-postgres";
 import bcrypt from "bcryptjs";
 import { addDays, subDays, subHours, subMinutes, startOfDay } from "date-fns";
@@ -41,13 +42,19 @@ const PASSWORD = "raynaters123";
 
 /* ------------------------------ Fixtures ----------------------------- */
 
+/* One of each role, so every permission path has a real account to sign in as
+   and check. The three non-calling roles carry a zero dial target — a target
+   for someone who never calls would show as a permanent 0% ring. */
 const PEOPLE = [
   { name: "Zainab Haider", email: "zainab@raynaters.test", role: "owner" as const, dial: 40, connect: 10 },
+  { name: "Imran Qadir", email: "imran@raynaters.test", role: "manager" as const, dial: 20, connect: 5 },
   { name: "Bilal Ahmed", email: "bilal@raynaters.test", role: "team_lead" as const, dial: 60, connect: 14 },
   { name: "Sara Iqbal", email: "sara@raynaters.test", role: "agent" as const, dial: 70, connect: 16 },
   { name: "Usman Tariq", email: "usman@raynaters.test", role: "agent" as const, dial: 65, connect: 14 },
   { name: "Ayesha Noor", email: "ayesha@raynaters.test", role: "agent" as const, dial: 60, connect: 12 },
   { name: "Hamza Sheikh", email: "hamza@raynaters.test", role: "agent" as const, dial: 55, connect: 11 },
+  { name: "Mehak Raza", email: "mehak@raynaters.test", role: "researcher" as const, dial: 0, connect: 0 },
+  { name: "Adnan Yousuf", email: "adnan@raynaters.test", role: "viewer" as const, dial: 0, connect: 0 },
 ];
 
 const FIRST = ["Ahmed","Fatima","Omar","Hina","Kashif","Nida","Rizwan","Sana","Tariq","Amna","Junaid","Maryam","Salman","Zara","Faisal","Kiran","Adeel","Sadia","Waqas","Noor","Imran","Rabia","Shahid","Areeba","Danish","Mehwish","Asad","Iqra","Bilal","Sidra","Owais","Laiba","Hassan","Anum","Kamran","Sobia","Nadeem","Hira","Yasir","Mahnoor"];
@@ -169,9 +176,17 @@ async function main() {
     })),
   );
 
+  /* Look people up by email rather than by position. The list above has grown
+     twice now, and positional destructuring silently reassigned who was who
+     both times. */
+  const at = (email: string) => people[PEOPLE.findIndex((p) => p.email === email)]!;
+  const researcher = at("mehak@raynaters.test");
+  const teamLead = at("bilal@raynaters.test");
+
   // Sara can see Usman's leads; Usman cannot see Sara's. Directional on purpose —
   // this is the case the permission tests pin down.
-  const [, , sara, usman] = people;
+  const sara = at("sara@raynaters.test");
+  const usman = at("usman@raynaters.test");
   await db.insert(leadVisibilityLinks).values({
     teamId: team!.id,
     viewerUserId: sara!.id,
@@ -184,7 +199,7 @@ async function main() {
     .values(
       BATCHES.map((b, i) => ({
         teamId: team!.id,
-        uploadedBy: people[1]!.id,
+        uploadedBy: researcher.id,
         filename: b.filename,
         rowCount: 90 - i * 10,
         importedCount: 84 - i * 10,
@@ -213,12 +228,17 @@ async function main() {
 
   await db.insert(doNotCall).values([
     { orgId: org!.id, phone: "+923001112233", reason: "Asked to be removed", addedBy: people[0]!.id },
-    { orgId: org!.id, phone: "+923214445566", reason: "Complained about repeat calls", addedBy: people[1]!.id },
+    { orgId: org!.id, phone: "+923214445566", reason: "Complained about repeat calls", addedBy: researcher.id },
   ]);
 
   /* ------------------------------ Leads ----------------------------- */
 
-  const agents = people.slice(1); // owner keeps a light book
+  /* Only roles that actually call carry a book of leads — a researcher or a
+     viewer holding leads would be a contradiction the UI has no way to show.
+     The owner keeps a light book, so they are excluded too. */
+  const agents = people.filter(
+    (_, i) => can(PEOPLE[i]!.role, "calls.log") && PEOPLE[i]!.role !== "owner",
+  );
   const now = new Date();
   const leadRows: (typeof leads.$inferInsert)[] = [];
   const TOTAL = 240;
@@ -347,7 +367,7 @@ async function main() {
       followUpNote,
       followUpCount: nextFollowUpAt ? intBetween(0, 3) : 0,
       assignedTo: chance(0.94) ? owner.id : null,
-      createdBy: people[1]!.id,
+      createdBy: researcher.id,
       attemptsCount: attempts,
       connectsCount: connects,
       lastAttemptedAt,
@@ -377,7 +397,7 @@ async function main() {
   for (const lead of inserted) {
     activityRows.push({
       leadId: lead.id,
-      userId: people[1]!.id,
+      userId: teamLead.id,
       type: "import",
       body: "Imported from a scraped sheet",
       createdAt: subDays(now, intBetween(20, 55)),
@@ -390,7 +410,7 @@ async function main() {
       if (answered) connectsLeft--;
       activityRows.push({
         leadId: lead.id,
-        userId: lead.assignedTo ?? people[2]!.id,
+        userId: lead.assignedTo ?? sara.id,
         type: "call",
         callOutcome: answered ? "answered" : pick(OUTCOMES.filter((o) => o !== "answered")),
         durationSeconds: answered ? intBetween(45, 480) : intBetween(4, 25),
@@ -402,7 +422,7 @@ async function main() {
     if (chance(0.35)) {
       activityRows.push({
         leadId: lead.id,
-        userId: lead.assignedTo ?? people[2]!.id,
+        userId: lead.assignedTo ?? sara.id,
         type: "note",
         body: pick(NOTE_LINES),
         createdAt: subDays(now, intBetween(0, 18)),
@@ -412,7 +432,7 @@ async function main() {
     if (lead.trialStartedAt) {
       activityRows.push({
         leadId: lead.id,
-        userId: lead.assignedTo ?? people[2]!.id,
+        userId: lead.assignedTo ?? sara.id,
         type: "trial_event",
         body: "7-day demo week started",
         toValue: { trialStatus: "active" },
@@ -422,7 +442,7 @@ async function main() {
     if (lead.status === "converted") {
       activityRows.push({
         leadId: lead.id,
-        userId: lead.assignedTo ?? people[2]!.id,
+        userId: lead.assignedTo ?? sara.id,
         type: "trial_event",
         body: "Converted to paying client",
         toValue: { trialStatus: "converted" },
@@ -444,6 +464,10 @@ async function main() {
     if (weekday === 0) continue; // Sunday off
     for (const person of people) {
       const idx = people.indexOf(person);
+      /* Non-calling roles get no rows at all. A researcher sitting at the
+         bottom of the leaderboard on 0 dials reads as underperformance
+         rather than as "this job is not calling". */
+      if (!can(PEOPLE[idx]!.role, "calls.log")) continue;
       const base = PEOPLE[idx]!.dial;
       const dials = Math.max(0, Math.round(base * (0.55 + rnd() * 0.75)));
       const answered = Math.round(dials * (0.16 + rnd() * 0.16));

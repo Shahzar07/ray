@@ -16,7 +16,7 @@ import {
   type NewLead,
 } from "@/lib/db/schema";
 import { requireSession, type SessionContext } from "@/lib/auth/session";
-import { assertCanManageTeam, PermissionError } from "@/lib/auth/visibility";
+import { assertCan, PermissionError } from "@/lib/auth/visibility";
 import { normalisePhone } from "@/lib/domain/phone";
 import {
   customKeyOf,
@@ -180,7 +180,7 @@ function fail(error: unknown): ActionResult<never> {
 export async function previewImport(input: unknown): Promise<ActionResult<ImportPreview>> {
   try {
     const ctx = await requireSession();
-    await assertCanManageTeam(ctx.user.id, ctx.team.id);
+    await assertCan(ctx.user.id, ctx.team.id, "leads.import");
     const data = importPreviewSchema.parse(input);
 
     const mapped = mapRows(data.headers, data.rows, data.mapping, await activeCustomKeys(ctx.org.id));
@@ -247,7 +247,7 @@ export type ImportSummary = {
 export async function runImport(input: unknown): Promise<ActionResult<ImportSummary>> {
   try {
     const ctx = await requireSession();
-    await assertCanManageTeam(ctx.user.id, ctx.team.id);
+    await assertCan(ctx.user.id, ctx.team.id, "leads.import");
     const data = runImportSchema.parse(input);
 
     const members = await teamMemberDirectory(ctx.team.id);
@@ -495,7 +495,7 @@ export async function undoImportBatch(batchId: string): Promise<ActionResult<{ r
 
     const [batch] = await db.select().from(importBatches).where(eq(importBatches.id, id)).limit(1);
     if (!batch) return { ok: false, error: "That import no longer exists." };
-    await assertCanManageTeam(ctx.user.id, batch.teamId);
+    await assertCan(ctx.user.id, batch.teamId, "leads.import");
 
     const batchLeads = await db
       .select({ id: leads.id })

@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/toast";
 import { toggleVisibility } from "@/lib/actions/admin";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/db/schema";
+import { ROLE } from "@/lib/domain/constants";
+import { visibilityScope } from "@/lib/domain/roles";
 
 export type MatrixMember = {
   userId: string;
@@ -38,7 +40,9 @@ export function VisibilityMatrix({
   const [state, setState] = React.useState(grants);
   const [busy, setBusy] = React.useState<string | null>(null);
 
-  const agents = members.filter((m) => m.role === "agent");
+  /* Links only mean anything for roles scoped to their own leads; every
+     other role already sees the whole team. */
+  const agents = members.filter((m) => visibilityScope(m.role) === "own");
 
   async function toggle(viewer: MatrixMember, target: MatrixMember) {
     const key = `${viewer.userId}:${target.userId}`;
@@ -144,7 +148,7 @@ export function VisibilityMatrix({
             </thead>
             <tbody>
               {members.map((viewer) => {
-                const isManager = viewer.role !== "agent";
+                const seesEveryone = visibilityScope(viewer.role) !== "own";
                 return (
                   <tr key={viewer.userId} className="group">
                     <th className="sticky left-0 z-10 bg-surface px-3 py-1.5 text-left font-normal">
@@ -154,7 +158,7 @@ export function VisibilityMatrix({
                           <span className="block truncate text-[13px] font-medium text-strong">
                             {viewer.name ?? viewer.email}
                           </span>
-                          {isManager && (
+                          {seesEveryone && (
                             <Badge tone="info" size="xs" className="mt-0.5">
                               sees everyone
                             </Badge>
@@ -180,13 +184,13 @@ export function VisibilityMatrix({
                         );
                       }
 
-                      if (isManager) {
+                      if (seesEveryone) {
                         return (
                           <td key={target.userId} className="px-1 py-1.5">
                             <Hint
-                              label={`${viewer.name ?? viewer.email} is ${
-                                viewer.role === "owner" ? "an owner" : "a team lead"
-                              } and already sees every lead in the team.`}
+                              label={`${viewer.name ?? viewer.email} is ${ROLE[
+                                viewer.role
+                              ].label.toLowerCase()} and already sees every lead in the team.`}
                             >
                               <div className="mx-auto grid size-8 place-items-center rounded-lg text-info">
                                 <Shield className="size-3.5" />

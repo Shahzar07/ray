@@ -4,6 +4,7 @@ import { visibleUserIds } from "@/lib/auth/visibility";
 import { getBoardCards } from "@/lib/queries/board";
 import { PageBody, PageHeader } from "@/components/shell/app-shell";
 import { BoardClient } from "./board-client";
+import { can } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "Board" };
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function BoardPage({
         <BoardClient
           tz={ctx.user.timezone}
           assignee={assignee}
-          canReassign={ctx.role !== "agent"}
+          canReassign={can(ctx.role, "leads.manageAll")}
           members={visible.map((m) => ({ id: m.id, name: m.name, email: m.email, avatarUrl: m.avatarUrl }))}
           cards={cards.map((card) => ({
             ...card,

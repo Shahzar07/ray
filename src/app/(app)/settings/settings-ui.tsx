@@ -7,18 +7,21 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FormState } from "@/lib/actions/auth";
 import type { Role } from "@/lib/db/schema";
+import { can, type Capability } from "@/lib/domain/roles";
 
+/* Each tab names the capability that opens it, so the tab strip and the page
+   guards agree by construction rather than by both being kept in step. */
 export const SETTINGS_TABS = [
-  { href: "/settings", label: "General", managerOnly: true },
-  { href: "/settings/team", label: "Team & access", managerOnly: true },
-  { href: "/settings/fields", label: "Custom fields", managerOnly: true },
-  { href: "/settings/dnc", label: "Do-not-call", managerOnly: true },
-  { href: "/settings/profile", label: "Your profile", managerOnly: false },
-] as const;
+  { href: "/settings", label: "General", capability: "team.settings" },
+  { href: "/settings/team", label: "Team & access", capability: "members.manage" },
+  { href: "/settings/fields", label: "Custom fields", capability: "data.curate" },
+  { href: "/settings/dnc", label: "Do-not-call", capability: "data.curate" },
+  { href: "/settings/profile", label: "Your profile", capability: null },
+] as const satisfies ReadonlyArray<{ href: string; label: string; capability: Capability | null }>;
 
 export function SettingsNav({ role }: { role: Role }) {
   const pathname = usePathname();
-  const tabs = SETTINGS_TABS.filter((tab) => !tab.managerOnly || role !== "agent");
+  const tabs = SETTINGS_TABS.filter((tab) => tab.capability === null || can(role, tab.capability));
 
   return (
     <nav className="-mb-px flex gap-1 overflow-x-auto px-4 sm:px-6" aria-label="Settings sections">

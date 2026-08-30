@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Sidebar } from "./sidebar";
 import { CommandPalette } from "./command-palette";
 import { NotificationBell, type NotificationItem } from "./notification-bell";
-import { MOBILE_NAV, navForRole } from "./nav-config";
+import { mobileNavForRole, navForRole } from "./nav-config";
 import { ThemeToggle } from "./theme-toggle";
 import { Avatar } from "@/components/ui/controls";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,8 @@ export function AppShell({
     };
   }, [ctx.role, router]);
 
+  const mobileItems = React.useMemo(() => mobileNavForRole(ctx.role), [ctx.role]);
+
   React.useEffect(() => setMobileNavOpen(false), [pathname]);
 
   /* Call Mode owns the whole viewport — no chrome competing for the thumb. */
@@ -125,11 +127,16 @@ export function AppShell({
       {/* Mobile bottom tab bar */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-[color-mix(in_oklch,var(--surface)_92%,transparent)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 grid border-t border-line bg-[color-mix(in_oklch,var(--surface)_92%,transparent)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        /* Column count follows the role: a researcher has no Call Mode, and a
+           five-column grid holding four links leaves a dead gap. */
+        style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }}
       >
-        {MOBILE_NAV.map((item, i) => {
+        {mobileItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const centre = i === 2;
+          /* Identify the raised centre button by what it is, not where it sits —
+             filtering moves it. */
+          const centre = item.href === "/call";
           return (
             <Link
               key={item.href}

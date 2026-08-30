@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireSession } from "@/lib/auth/session";
+import { requireCapability } from "@/lib/auth/session";
 import { buildCallQueue, type QueueReason } from "@/lib/queries/call-queue";
 import { getTodayProgress } from "@/lib/queries/dashboard";
 import { CallMode } from "./call-mode";
@@ -12,7 +12,7 @@ export default async function CallPage({
 }: {
   searchParams: Promise<{ view?: string; lead?: string }>;
 }) {
-  const ctx = await requireSession();
+  const ctx = await requireCapability("calls.log");
   const params = await searchParams;
 
   const only = (["overdue", "due_today", "trial", "hot", "new"] as QueueReason[]).includes(

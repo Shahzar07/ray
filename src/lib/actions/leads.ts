@@ -18,6 +18,7 @@ import { normalisePhone } from "@/lib/domain/phone";
 import { TRIAL_LENGTH_DAYS } from "@/lib/domain/constants";
 import { TRIAL_TASKS } from "@/lib/domain/trials";
 import { changedFields, notify, recordActivity } from "./activity";
+import { can } from "@/lib/domain/roles";
 import {
   addNoteSchema,
   bulkActionSchema,
@@ -347,7 +348,7 @@ export async function bulkUpdate(input: unknown): Promise<ActionResult<{ affecte
       .from(leads)
       .where(and(eq(leads.teamId, ctx.team.id), inArray(leads.id, data.leadIds)));
 
-    const canManage = ctx.role !== "agent";
+    const canManage = can(ctx.role, "leads.manageAll");
     const targets = rows.filter((r) =>
       canManage ? true : r.assignedTo === ctx.user.id || r.assignedTo === null,
     );
