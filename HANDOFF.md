@@ -33,6 +33,12 @@ The design system is the load-bearing part of this repo. Match it; don't reinven
 
 Everything in the brief's Phases 1–5 except the two items under "Not built" below.
 
+### Backend
+Postgres on **Supabase** (transaction pooler for the app on 6543, `DIRECT_URL` on 5432
+for migrations — DDL does not belong on a transaction pooler). Supabase is used purely
+as Postgres: not its Auth, not its Storage. Neon still works unchanged by swapping
+`DATABASE_URL`; the driver is picked from the URL.
+
 ### Foundation
 - Next.js 15 App Router, TypeScript strict, **no `any` anywhere**.
 - Tailwind v4 CSS-first design tokens in `src/app/globals.css` — full light + dark
@@ -80,8 +86,8 @@ Four routes under `/api/cron/*`, all behind a constant-time `CRON_SECRET` check 
 See README → Scheduled jobs.
 
 ### AI
-`src/lib/ai/client.ts` is the single door: one plain fetch to Groq, Zod-validated JSON,
-typed failures, **never throws, never blocks a save**. Features: note→structured update
+`src/lib/ai/client.ts` is the single door: one plain fetch to **OpenRouter free
+models**, Zod-validated JSON, typed failures, **never throws, never blocks a save**. Features: note→structured update
 (suggests, never writes), objection coach grounded in the team's own won leads,
 follow-up drafting, and prose for the nightly brief. Lead scoring is deliberately pure
 statistics in the nightly cron, per the brief. `tests/ai-client.test.ts` pins the
@@ -93,12 +99,11 @@ client's contract against every failure mode with a mocked fetch — no key need
 
 Only two things from the brief remain, both deliberately left last.
 
-1. **Postgres RLS.** Not applied, and there is no script for it. The honest caveat to
-   carry forward: the Neon HTTP driver opens a fresh connection per query, so there is
-   no session in which to `SET app.user_id` — per-user RLS is only practical on the
-   node-postgres path (self-hosted, or Supabase's pooler). Document that rather than
-   pretending otherwise. The application layer is already the real guard and is tested;
-   RLS would be defence in depth, not the primary control.
+1. **Postgres RLS.** Not applied, and there is no script for it. This got *more*
+   feasible with the move to Supabase: the app now runs on node-postgres, so a
+   `SET LOCAL app.user_id` inside a transaction is available in a way it never was over
+   Neon's HTTP driver. It is still defence in depth, not the primary control — the
+   application layer is the real guard and is the thing with 22 tests behind it.
 
 2. **PWA offline queue.** `manifest.webmanifest` and the icon exist and are linked, so
    the app is installable. `next-pwa` is not installed, and there is no service worker
@@ -113,11 +118,23 @@ Only two things from the brief remain, both deliberately left last.
   shipping both is a real hazard. **This is a deferral, not an answer.** If the team
   wants pnpm (and the scripts suggest they do), delete the ignore rule and
   `package-lock.json` together in one deliberate commit.
-- The **live Groq path is untested against the real API** — I had no key. The client's
-  contract is covered by unit tests with a mocked fetch, and the whole UI was verified
-  both with no key (affordances absent) and with an unreachable key (fails gracefully,
-  note preserved). Prompt quality is the unknown; expect to tune the system prompts in
-  `src/lib/ai/features.ts` once a real key is in.
+- **The AI path is verified end to end against the live API** on free models. Three
+  free-tier realities are baked into the client, each found by testing rather than by
+  reading docs, and each will bite anyone who "simplifies" them away:
+  1. Send a **chain of up to three models**, not one — free models rate-limit hard and
+     independently. More than three is a 400 from OpenRouter; the code caps it.
+  2. **`reasoning: { enabled: false }`** is load-bearing. Several free models narrate
+     their thinking into `content`, so `max_tokens` ran out mid-thought and no JSON ever
+     arrived (`finish_reason: "length"`). This broke every feature until it was set.
+  3. Suggested fields are **validated independently** (`lenient()` + `.catch`). A model
+     that returns `"Warm"` as a status still keeps its summary and follow-up date.
+  `AI_LIVE=1 pnpm test tests/ai-live.test.ts` re-checks all four features against the
+  real API; `AI_DEBUG=1` dumps raw replies for prompt tuning.
+- **No AI voice.** Server-side transcription was considered and dropped: OpenRouter
+  requires a minimum account balance for *any* audio request, even against a `:free`
+  model, so it is not a $0 path. Browser dictation (Web Speech) already covers it and
+  costs nothing. Every Gemini model on OpenRouter is paid too — there is no free
+  Gemini Flash, despite the name suggesting otherwise.
 - **Chart palette caveat.** `SERIES_COLORS` passes a colour-blindness and contrast audit
   in light mode with two warnings that the table view on every chart discharges. In dark
   mode three tokens sit outside the ideal lightness band for a dark surface. It reads

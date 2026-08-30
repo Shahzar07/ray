@@ -5,8 +5,17 @@ const schema = z.object({
   AUTH_SECRET: z.string().min(16, "AUTH_SECRET must be at least 16 chars"),
   AUTH_URL: z.string().url().optional(),
   CRON_SECRET: z.string().optional(),
-  GROQ_API_KEY: z.string().optional(),
-  GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
+  OPENROUTER_API_KEY: z.string().optional(),
+  /**
+   * Comma-separated fallback chain. OpenRouter tries them in order and serves
+   * the first that answers, which matters because free models rate-limit hard
+   * and independently — a single model id would make the AI features flaky.
+   */
+  OPENROUTER_MODELS: z
+    .string()
+    .default("nvidia/nemotron-3-super-120b-a12b:free,z-ai/glm-5.2:free,google/gemma-4-31b-it:free"),
+  /** Sent to OpenRouter for attribution; harmless if unset. */
+  OPENROUTER_SITE_URL: z.string().optional(),
   DEFAULT_COUNTRY: z.string().length(2).default("PK"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
@@ -23,10 +32,22 @@ export const env = (parsed.success
   : ({
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       AUTH_SECRET: process.env.AUTH_SECRET ?? "dev-secret-dev-secret",
-      GROQ_MODEL: "llama-3.3-70b-versatile",
+      OPENROUTER_MODELS:
+        "nvidia/nemotron-3-super-120b-a12b:free,z-ai/glm-5.2:free,google/gemma-4-31b-it:free",
       DEFAULT_COUNTRY: "PK",
       NODE_ENV: "development",
     } as z.infer<typeof schema>)) satisfies z.infer<typeof schema>;
 
 /** AI features are strictly optional — the app is fully usable without a key. */
-export const aiEnabled = Boolean(env.GROQ_API_KEY);
+export const aiEnabled = Boolean(env.OPENROUTER_API_KEY);
+
+/**
+ * The fallback chain, parsed once. Capped at three because OpenRouter rejects
+ * a longer `models` array with a 400 — without this cap, one over-long env
+ * value would silently break every AI surface at once.
+ */
+export const aiModels: string[] = env.OPENROUTER_MODELS.split(",")
+  .map((m) => m.trim())
+  .filter(Boolean)
+  .slice(0, 3);
+

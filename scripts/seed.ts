@@ -29,7 +29,7 @@ const {
   doNotCall,
 } = schema;
 
-const url = process.env.DATABASE_URL;
+const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env first.");
 
 const pool = new Pool({ connectionString: url });

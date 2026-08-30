@@ -18,14 +18,38 @@ import {
  * *suggestion*, never a write — the action that applies it is separate and
  * runs through the same guards and Zod schemas as any manual edit.
  */
+/**
+ * Free models answer with the right idea in the wrong casing ("Warm" for
+ * "warm") and occasionally put an interest level in the status field. Two
+ * defences, in this order:
+ *
+ *   `lenient` normalises casing and spacing before the enum is checked, so a
+ *   cosmetic mismatch is not treated as a wrong answer;
+ *   `.catch(undefined)` then drops just that field if it is still invalid,
+ *   instead of failing the whole object.
+ *
+ * That matters because the fields are independent. A model that fumbles
+ * `status` often still produced a perfect summary and follow-up date, and
+ * throwing those away leaves the caller typing everything by hand. Dropping
+ * one field is exactly the prompt's own rule — a missing field is much better
+ * than a wrong one — applied to the parse as well.
+ */
+function lenient<T extends z.ZodTypeAny>(schema: T) {
+  return z.preprocess(
+    (value) =>
+      typeof value === "string" ? value.trim().toLowerCase().replace(/[\s-]+/g, "_") : value,
+    schema.nullish(),
+  ).catch(undefined);
+}
+
 export const noteSuggestionSchema = z.object({
-  status: leadStatusSchema.nullish(),
-  interestLevel: interestLevelSchema.nullish(),
-  followUpInDays: z.number().int().min(0).max(365).nullish(),
-  followUpChannel: followUpChannelSchema.nullish(),
-  trialIntent: z.boolean().nullish(),
-  summary: z.string().min(1).max(240),
-  tags: z.array(z.string().min(1).max(40)).max(5).default([]),
+  status: lenient(leadStatusSchema),
+  interestLevel: lenient(interestLevelSchema),
+  followUpInDays: z.coerce.number().int().min(0).max(365).nullish().catch(undefined),
+  followUpChannel: lenient(followUpChannelSchema),
+  trialIntent: z.boolean().nullish().catch(undefined),
+  summary: z.string().min(1).max(400),
+  tags: z.array(z.string().min(1).max(40)).max(5).catch([]).default([]),
 });
 
 export type NoteSuggestion = z.infer<typeof noteSuggestionSchema>;
@@ -48,7 +72,9 @@ Rules:
 - "Call me after Eid" or "next month" means estimate followUpInDays; be conservative.
 - If they said no, that is not_interested — not lost.
 - If the person on the phone was not the target, that is gatekeeper in tags, not wrong_number.
-- Omit any key you are not confident about. A missing field is much better than a wrong one.`;
+- Omit any key you are not confident about. A missing field is much better than a wrong one.
+- Values must be lowercase and exactly one of the options listed. Do not capitalise them, and do not invent new ones ("Medium" and "Warm" are not valid statuses).
+- Do not put an interest level in the status field. They are separate.`;
 
 export async function suggestFromNote(
   note: string,
@@ -68,7 +94,7 @@ export async function suggestFromNote(
       .filter(Boolean)
       .join("\n"),
     schema: noteSuggestionSchema,
-    maxTokens: 400,
+    maxTokens: 800,
   });
 }
 
@@ -92,7 +118,7 @@ export const objectionCoachSchema = z.object({
     )
     .min(1)
     .max(3),
-  grounded: z.boolean().default(false),
+  grounded: z.boolean().catch(false).default(false),
 });
 
 export type ObjectionCoaching = z.infer<typeof objectionCoachSchema>;
@@ -129,7 +155,7 @@ export async function coachObjection(
         : "This team has no converted leads with notes yet.",
     ].join("\n"),
     schema: objectionCoachSchema,
-    maxTokens: 600,
+    maxTokens: 900,
     temperature: 0.4,
   });
 }
@@ -179,7 +205,7 @@ export async function draftFollowUp(input: {
       .filter(Boolean)
       .join("\n"),
     schema: draftSchema,
-    maxTokens: 400,
+    maxTokens: 700,
     temperature: 0.5,
   });
 }
@@ -209,7 +235,7 @@ export async function writeBrief(facts: Record<string, unknown>): Promise<AiResu
     system: BRIEF_SYSTEM,
     user: `Today's numbers for this team:\n${JSON.stringify(facts, null, 2)}`,
     schema: briefSchema,
-    maxTokens: 400,
+    maxTokens: 700,
     temperature: 0.3,
   });
 }

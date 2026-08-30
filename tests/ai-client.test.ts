@@ -6,13 +6,14 @@ import { z } from "zod";
  * on: it must never throw, and it must never let an unvalidated reply through.
  * These tests hold that contract against every way the call can go wrong.
  *
- * `fetch` is mocked, so nothing here touches Groq or needs a real key.
+ * `fetch` is mocked, so nothing here touches OpenRouter or needs a real key.
+ * The live counterpart is `ai-live.test.ts`, which is opt-in via AI_LIVE=1.
  */
 
 const schema = z.object({ status: z.enum(["interested", "lost"]), summary: z.string() });
 
 // aiEnabled is read at module load, so the key has to exist before the import.
-process.env.GROQ_API_KEY = "test-key-not-real";
+process.env.OPENROUTER_API_KEY = "test-key-not-real";
 
 type Client = typeof import("@/lib/ai/client");
 let askAI: Client["askAI"];
@@ -56,6 +57,9 @@ describe("askAI", () => {
     const [, init] = fetchMock.mock.calls[0]!;
     const body = JSON.parse(init.body as string);
     expect(body.response_format).toEqual({ type: "json_object" });
+    // A chain, not one id — this is what keeps the free tier usable.
+    expect(Array.isArray(body.models)).toBe(true);
+    expect(body.models.length).toBeGreaterThan(0);
     expect(body.messages).toEqual([
       { role: "system", content: "sys" },
       { role: "user", content: "usr" },
@@ -96,6 +100,14 @@ describe("askAI", () => {
     expect(result).toEqual({ ok: false, reason: "rate_limited" });
   });
 
+  it("reports a missing balance distinctly from a network fault", async () => {
+    vi.stubGlobal("fetch", reply({}, 402));
+
+    const result = await askAI({ system: "s", user: "u", schema });
+
+    expect(result).toEqual({ ok: false, reason: "needs_credit" });
+  });
+
   it("gives up rather than hanging when the model is slow", async () => {
     vi.stubGlobal(
       "fetch",
@@ -129,8 +141,8 @@ describe("askAI", () => {
 describe("without a key", () => {
   it("is disabled, and does not call out at all", async () => {
     vi.resetModules();
-    const previous = process.env.GROQ_API_KEY;
-    delete process.env.GROQ_API_KEY;
+    const previous = process.env.OPENROUTER_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
@@ -140,7 +152,7 @@ describe("without a key", () => {
     expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(fetchMock).not.toHaveBeenCalled();
 
-    process.env.GROQ_API_KEY = previous;
+    process.env.OPENROUTER_API_KEY = previous;
     vi.resetModules();
   });
 });

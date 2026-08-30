@@ -15,7 +15,7 @@ desktop for management. **Total recurring cost: $0** — every service is on a f
 | --- | --- |
 | Framework | Next.js 15 (App Router), React 19, TypeScript strict — no `any` |
 | Styling | Tailwind CSS v4 (CSS-first tokens) + Radix primitives, shadcn-style |
-| Database | Postgres — Neon free tier in production, any Postgres locally |
+| Database | Postgres — Supabase or Neon free tier in production, any Postgres locally |
 | ORM | Drizzle + drizzle-kit migrations |
 | Auth | Auth.js v5 (credentials + bcrypt) with an invite-token flow |
 | Tables | TanStack Table v8 + TanStack Virtual |
@@ -24,12 +24,12 @@ desktop for management. **Total recurring cost: $0** — every service is on a f
 | Mutations | Server Actions; Route Handlers only for import / export / search / cron |
 | Dates | `date-fns` + `date-fns-tz`; every timestamp stored `timestamptz` in UTC |
 | Hosting | Vercel Hobby + Vercel Cron |
-| AI (optional) | Groq free tier behind one swappable adapter — the app is fully usable with it off |
+| AI (optional) | OpenRouter free models behind one swappable adapter — the app is fully usable with it off |
 | Voice | Browser Web Speech API — free, no service |
 
 The database driver is chosen at runtime: `@neondatabase/serverless` over HTTP when
-`DATABASE_URL` points at Neon, `node-postgres` otherwise. Same Drizzle schema either
-way, so the app also runs unchanged on Supabase free or a self-hosted Postgres.
+`DATABASE_URL` points at Neon, `node-postgres` everywhere else — Supabase, local
+Postgres, and every script. Same Drizzle schema either way.
 
 ---
 
@@ -86,11 +86,12 @@ pnpm dev              # http://localhost:3000
 Every variable is documented inline in [`.env.example`](./.env.example). The two
 required ones:
 
-- `DATABASE_URL` — Neon's **pooled** connection string in production; any Postgres 14+ locally.
+- `DATABASE_URL` — Supabase's **transaction pooler** URI (or Neon's pooled string) in
+  production; any Postgres 14+ locally.
 - `AUTH_SECRET` — `openssl rand -base64 32`.
 
-`GROQ_API_KEY` is optional by design. Leave it blank and every AI surface degrades to a
-plain manual control; nothing breaks.
+`OPENROUTER_API_KEY` is optional by design. Leave it blank and every AI surface
+degrades to a plain manual control; nothing breaks.
 
 ### Creating the first owner account
 
@@ -135,13 +136,29 @@ Usman **cannot** see Sara's — so the asymmetry is visible immediately.
 
 ## Deploying to Vercel
 
-1. Create a Neon project (free tier) and copy the **pooled** connection string.
-2. Import this repo into Vercel.
-3. Set `DATABASE_URL`, `AUTH_SECRET`, and `CRON_SECRET` in Project → Settings →
-   Environment Variables. `AUTH_URL` is inferred on Vercel.
-4. Run `pnpm db:migrate` once against the Neon URL (locally, with `DATABASE_URL` pointed
-   at Neon) — Vercel's build step does not migrate.
-5. Deploy, then visit `/setup` to create the owner account.
+### With Supabase (recommended)
+
+Supabase is used purely as Postgres — not its Auth, not its Storage. Auth.js already
+owns sessions and the app owns its own schema, so nothing in Supabase needs configuring
+beyond the database itself.
+
+1. In your Supabase project: **Settings → Database → Connection string**. Take two URIs,
+   both with your database password substituted in:
+   - **Transaction pooler**, port `6543` → `DATABASE_URL`. Serverless functions open
+     many short-lived connections and this is what survives that.
+   - **Direct connection**, port `5432` → `DIRECT_URL`. Migrations run DDL, which does
+     not belong on a transaction pooler.
+2. Set `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` and `CRON_SECRET` in Vercel →
+   Project → Settings → Environment Variables. `AUTH_URL` is inferred on Vercel.
+3. Run `pnpm db:migrate` once locally with those variables set — Vercel's build step
+   does not migrate. `pnpm db:seed` is optional sample data.
+4. Deploy, then visit `/setup` to create the owner account.
+
+Drizzle only issues named prepared statements when you call `.prepare()`, which this
+codebase never does, so every query here is compatible with transaction-mode pooling.
+
+**Neon works too** — put its pooled string in `DATABASE_URL`, leave `DIRECT_URL` blank,
+and the driver switches to Neon's HTTP transport automatically.
 
 ### Scheduled jobs
 
@@ -197,9 +214,26 @@ leak.
 ## AI features (all optional)
 
 Everything lives behind [`src/lib/ai/client.ts`](./src/lib/ai/client.ts) — one plain
-fetch to Groq's free tier, a Zod-validated JSON reply, and a typed failure instead of an
-exception. **It never throws and never blocks a save.** Leave `GROQ_API_KEY` blank and
-the affordances simply do not render; nothing else changes.
+fetch to OpenRouter, a Zod-validated JSON reply, and a typed failure instead of an
+exception. **It never throws and never blocks a save.** Leave `OPENROUTER_API_KEY` blank
+and the affordances simply do not render; nothing else changes.
+
+Only **free** (`:free`) models are used, so the $0 constraint holds. Three things about
+the free tier are worth knowing, because all three were found by testing against a live
+key rather than by reading docs:
+
+- **Requests send a chain of up to three models, not one.** Free models rate-limit hard
+  and independently; OpenRouter serves the first that answers. A single id makes every
+  AI surface flaky. OpenRouter rejects more than three, and the code caps it there.
+- **Reasoning is turned off** (`reasoning: { enabled: false }`). Several free models
+  narrate their thinking into `content` rather than the separate `reasoning` field, so
+  `max_tokens` ran out mid-thought and the JSON never arrived. Turning it off fixed
+  every feature and made the calls markedly faster.
+- **Each suggested field is validated independently.** A model that returns `"Warm"`
+  for a status still gets its summary and follow-up date kept; only the bad field is
+  dropped. Casing and spacing are normalised before the enum check.
+
+Features:
 
 - **Note → structured update.** Type or dictate what happened and get the fields back as
   chips you can untick before applying. It suggests; it never writes. Applying goes
@@ -213,6 +247,13 @@ the affordances simply do not render; nothing else changes.
 - **Lead scoring** is deliberately *not* a model call — it is pure statistics in the
   nightly cron, exactly as the brief specifies. It drives Call Mode's ordering.
 - **Voice dictation** is the browser's Web Speech API. Free, no service, no key.
+
+To check a model change against the real API:
+
+```bash
+AI_LIVE=1 pnpm test tests/ai-live.test.ts   # opt-in; costs rate-limit budget
+AI_DEBUG=1 ...                              # also dumps raw replies, for prompt tuning
+```
 
 The Zod schema is the real boundary: a model that invents a status outside our enum
 fails there and you fall back to typing it yourself. A wrong suggestion is worse than
@@ -232,5 +273,5 @@ tier. The guard rails are still in place rather than bolted on later:
 - **Settings → General** shows live database size against the 512 MB ceiling, and the
   weekly job warns in-app once you pass 75%.
 
-If the tier is ever outgrown, the same Drizzle schema runs unchanged on Supabase free or
+If the tier is ever outgrown, the same Drizzle schema runs unchanged on Neon free or
 self-hosted Postgres — only `DATABASE_URL` changes.
