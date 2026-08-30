@@ -22,7 +22,21 @@ const schema = z.object({
 
 const parsed = schema.safeParse(process.env);
 
-if (!parsed.success && process.env.SKIP_ENV_VALIDATION !== "1") {
+/**
+ * A build is not a run. `next build` imports every route module to collect page
+ * data, which loads this file — so validating here used to make the build itself
+ * demand DATABASE_URL and AUTH_SECRET. On Vercel that surfaced as the wonderfully
+ * unhelpful "Failed to collect page data for /api/cron/follow-ups", with the real
+ * cause buried above it.
+ *
+ * Builds are skipped; every runtime path still validates on cold start, so a
+ * genuinely missing variable still fails loudly and early — just at the point
+ * where it actually matters.
+ */
+const isBuildPhase =
+  process.env.NEXT_PHASE === "phase-production-build" || process.env.SKIP_ENV_VALIDATION === "1";
+
+if (!parsed.success && !isBuildPhase) {
   const issues = parsed.error.issues.map((i) => `  • ${i.path.join(".")}: ${i.message}`).join("\n");
   throw new Error(`Invalid environment variables:\n${issues}\n\nCopy .env.example to .env and fill it in.`);
 }
