@@ -25,6 +25,14 @@ The original brief sized the app for "3 users at launch, up to 30 within 12 mont
 The user's other explicit priority: **"professional and next level UI modern dashboard."**
 The design system is the load-bearing part of this repo. Match it; don't reinvent it.
 
+**A second scope change landed after the first push:** an attendance layer (agents check
+in / check out, managers see who is working and their timesheets) plus a permission
+change — team analytics becomes owner + manager only, while the leaderboard stays visible
+to everyone. This reverses the original brief's "analytics visible to all". The full
+design is specced in [`docs/ATTENDANCE.md`](./docs/ATTENDANCE.md) — schema, permission
+matrix, screens, edge cases and an ordered build plan. **Read it before touching
+`/analytics`, `/team`, or `nav-config.ts`.** Nothing in it is built yet.
+
 ---
 
 ## What is built and working
@@ -129,26 +137,39 @@ In the order I'd do them:
    columns already. Needs the timeline/column UI, the 48h and >2-days-no-decision alerts,
    and conversion rate by caller and by source batch.
 
-4. **`/analytics`** — every query is already written in `queries/dashboard.ts`:
+4. **Attendance — permission split first.** Step A of `docs/ATTENDANCE.md` is small and
+   unblocks the rest: add `assertCanViewTeamAnalytics` to `visibility.ts`, restrict the
+   Analytics nav item to `["owner", "team_lead"]`, and add a `/leaderboard` route (all
+   roles) on the existing `getLeaderboard()` query. Do this before building `/analytics`
+   so it is built behind the right guard from the start.
+
+5. **Attendance — the rest.** Steps B–F of `docs/ATTENDANCE.md`: `work_sessions` +
+   `work_session_adjustments` tables, the global check-in control, `/timesheet`, the
+   `/team` Live and Timesheets tabs, the cron auto-close and `daily_stats` fold. The
+   spec has the exact schema, the partial unique index that prevents double check-in,
+   and every edge case worth getting right.
+
+6. **`/analytics`** — every query is already written in `queries/dashboard.ts`:
    `getFunnel`, `getDailySeries`, `getBestCallingHours`, `getBatchQuality`,
-   `getLostReasons`, `getLeaderboard`. Recharts v3 is installed. Leaderboard is
-   **visible to the whole team** by design. Use `SERIES_COLORS` from
-   `domain/constants.ts` — do not invent chart colours.
+   `getLostReasons`, `getLeaderboard`. Recharts v3 is installed. **Now owner +
+   team_lead only** — see item 4. Use `SERIES_COLORS` from `domain/constants.ts` — do
+   not invent chart colours.
 
-5. **`/team`** — `getTeamPerformance()` and `getActivityHeatmap()` are written. Needs the
+7. **`/team`** — `getTeamPerformance()` and `getActivityHeatmap()` are written. Needs the
    sortable member table, date range picker, drill-through, and the hour × weekday
-   heatmap.
+   heatmap — plus the two attendance tabs from the spec.
 
-6. **`/board`** — kanban. `getPipelineCounts()` exists. Drag-to-change-status should call
+8. **`/board`** — kanban. `getPipelineCounts()` exists. Drag-to-change-status should call
    the existing `updateLead` action.
 
-7. **Cron jobs** — none written yet. Four are specified (trial transitions hourly,
+9. **Cron jobs** — none written yet. Four are specified (trial transitions hourly,
    overdue notifications every 30m, nightly `daily_stats` aggregation + lead scoring +
-   cadence auto-Lost, weekly rollup). Every route must check `CRON_SECRET`. A
+   cadence auto-Lost, weekly rollup), and attendance adds two steps to the existing
+   hourly and nightly jobs rather than new endpoints — see `docs/ATTENDANCE.md`. Every route must check `CRON_SECRET`. A
    `vercel.json` still needs to be created. `nextTrialTask()` in `domain/trials.ts` is
    the helper the hourly job wants.
 
-8. **AI features** — nothing built. `GROQ_API_KEY` is already optional in `env.ts` and
+10. **AI features** — nothing built. `GROQ_API_KEY` is already optional in `env.ts` and
    `aiEnabled` is exported. Build `lib/ai/client.ts` as a plain fetch wrapper with a
    Zod-validated response and a graceful fallback. Start with **note → structured
    update** (highest value). Lead scoring **phase 1 must be pure statistics, no model
@@ -156,13 +177,13 @@ In the order I'd do them:
    currently only set by the seed. Voice dictation is already done
    (`lib/hooks/use-dictation.ts`) and feeds the note boxes.
 
-9. **Postgres RLS** — not applied, and there is no script for it yet. Honest caveat to
+11. **Postgres RLS** — not applied, and there is no script for it yet. Honest caveat to
    carry forward before you build one: the Neon HTTP driver opens a fresh connection
    per query, so there is no session in which to `SET app.user_id` — per-user RLS is only
    practical on the node-postgres path (self-hosted / Supabase pooler). Document that
    rather than pretending otherwise.
 
-10. **PWA offline queue** — `manifest.webmanifest` and the icon exist and are linked;
+12. **PWA offline queue** — `manifest.webmanifest` and the icon exist and are linked;
     `next-pwa` is not installed and there is no service worker or write queue.
 
 ---

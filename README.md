@@ -132,6 +132,10 @@ Three roles, scoped per team:
 nothing in return, and cross-visibility between two agents needs an explicit link
 created by an owner or team lead. One row grants exactly one direction.
 
+An attendance layer (check-in / check-out) and a matching permission split — team
+analytics restricted to owner + manager, leaderboard still visible to everyone — are
+designed but not yet built. See [`docs/ATTENDANCE.md`](./docs/ATTENDANCE.md).
+
 This lives in a single function, `visibleUserIds(userId, teamId)` in
 [`src/lib/auth/visibility.ts`](./src/lib/auth/visibility.ts). **Every lead read in the
 app goes through it** — `listLeads`, the ⌘K search, the CSV export, the call queue, the
