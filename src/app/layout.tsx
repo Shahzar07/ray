@@ -5,11 +5,11 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "CallDesk", template: "%s · CallDesk" },
+  title: { default: "Raynaters CRM", template: "%s · Raynaters CRM" },
   description: "Lead management and cold-call tracking for small outbound sales teams.",
-  applicationName: "CallDesk",
+  applicationName: "Raynaters CRM",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "CallDesk" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Raynaters CRM" },
   formatDetection: { telephone: false },
 };
 

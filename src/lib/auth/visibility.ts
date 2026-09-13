@@ -95,7 +95,9 @@ export async function leadAccess(
     .where(and(eq(memberships.userId, userId), eq(memberships.teamId, lead.teamId)))
     .limit(1);
 
-  const role: Role | null = membership?.role ?? ((await isOrgOwner(userId, db)) ? "owner" : null);
+  const owner = membership ? null : await isOrgOwner(userId, db);
+  const [leadTeam] = await db.select({ orgId: teams.orgId }).from(teams).where(eq(teams.id, lead.teamId)).limit(1);
+  const role: Role | null = membership?.role ?? (owner && owner.orgId === leadTeam?.orgId ? "owner" : null);
   if (!role) return deny;
 
   if (role === "owner" || role === "team_lead") {

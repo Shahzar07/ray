@@ -132,9 +132,10 @@ Three roles, scoped per team:
 nothing in return, and cross-visibility between two agents needs an explicit link
 created by an owner or team lead. One row grants exactly one direction.
 
-An attendance layer (check-in / check-out) and a matching permission split — team
-analytics restricted to owner + manager, leaderboard still visible to everyone — are
-designed but not yet built. See [`docs/ATTENDANCE.md`](./docs/ATTENDANCE.md).
+Attendance is available in the global check-in control, `/timesheet`, and the
+manager-only `/team` page. `/leaderboard` is available to everyone.
+See [`docs/RELEASE-ATTENDANCE.md`](./docs/RELEASE-ATTENDANCE.md) for what ships and deployment steps;
+[`docs/ATTENDANCE.md`](./docs/ATTENDANCE.md) remains the broader future design.
 
 This lives in a single function, `visibleUserIds(userId, teamId)` in
 [`src/lib/auth/visibility.ts`](./src/lib/auth/visibility.ts). **Every lead read in the

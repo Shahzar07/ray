@@ -55,6 +55,10 @@ export default async function TodayPage() {
       />
 
       <PageBody className="space-y-6">
+        <section className="crm-hero flex flex-wrap items-center justify-between gap-6 rounded-2xl p-6 sm:p-8">
+          <div><p className="text-xs font-semibold uppercase tracking-[.18em] text-emerald-300">Raynaters / Sales workspace</p><h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Make every conversation count.</h2><p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-300">Your follow-ups, your pipeline, and your next opportunity — ready for a focused day.</p></div>
+          <Link href={ctx.role === 'agent' ? '/timesheet' : '/team'} className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-medium text-white hover:bg-white/20">{ctx.role === 'agent' ? 'My work record' : 'View team attendance'}<ArrowRight className="size-4" /></Link>
+        </section>
         {/* Targets */}
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="flex items-center gap-4 rounded-xl border border-line bg-surface p-4 shadow-xs">

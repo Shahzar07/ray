@@ -313,6 +313,7 @@ export async function getLeaderboard(teamId: string, from: Date, to: Date): Prom
       dailyStats,
       and(
         eq(dailyStats.userId, users.id),
+        eq(dailyStats.teamId, teamId),
         gte(dailyStats.date, from.toISOString().slice(0, 10)),
         lte(dailyStats.date, to.toISOString().slice(0, 10)),
       ),

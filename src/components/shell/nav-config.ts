@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  Clock3,
+  Trophy,
   CalendarClock,
   KanbanSquare,
   LayoutGrid,
@@ -26,7 +28,7 @@ export type NavGroup = { label: string; items: NavItem[] };
 
 export const NAV: NavGroup[] = [
   {
-    label: "Calling",
+    label: "Sales workspace",
     items: [
       { href: "/today", label: "Today", icon: Sun, shortcut: "g t", description: "Your day at a glance" },
       { href: "/call", label: "Call Mode", icon: PhoneCall, shortcut: "g c", description: "One lead at a time, full screen" },
@@ -35,10 +37,12 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    label: "Pipeline",
+    label: "Workspace",
     items: [
+      { href: "/timesheet", label: "My timesheet", icon: Clock3, description: "Your daily check-in record" },
+      { href: "/leaderboard", label: "Leaderboard", icon: Trophy, description: "Team sales results" },
       { href: "/trials", label: "Demo Weeks", icon: CalendarClock, shortcut: "g d", description: "7-day trials in flight" },
-      { href: "/analytics", label: "Analytics", icon: BarChart3, shortcut: "g a", description: "Funnel, trends, leaderboard" },
+      { href: "/analytics", roles: ["owner", "team_lead"], label: "Analytics", icon: BarChart3, shortcut: "g a", description: "Funnel, trends, leaderboard" },
       {
         href: "/team",
         label: "Team",
@@ -81,6 +85,6 @@ export const MOBILE_NAV: NavItem[] = [
   NAV[0]!.items[0]!, // Today
   NAV[0]!.items[2]!, // Leads
   NAV[0]!.items[1]!, // Call Mode
-  NAV[1]!.items[0]!, // Demo Weeks
-  NAV[1]!.items[1]!, // Analytics
+  NAV[1]!.items[0]!, // My timesheet
+  NAV[1]!.items[1]!, // Leaderboard
 ];

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  DATABASE_CA_CERT: z.string().optional(),
   AUTH_SECRET: z.string().min(16, "AUTH_SECRET must be at least 16 chars"),
   AUTH_URL: z.string().url().optional(),
   CRON_SECRET: z.string().optional(),

@@ -3,6 +3,7 @@ import { drizzle as drizzlePg, type NodePgDatabase } from "drizzle-orm/node-post
 import { neon } from "@neondatabase/serverless";
 import { Pool } from "pg";
 import { env } from "@/lib/env";
+import { postgresConfig } from "./connection";
 import * as schema from "./schema";
 
 /**
@@ -23,7 +24,7 @@ function createDb(): Database {
   if (isNeon) {
     return drizzleNeon(neon(env.DATABASE_URL), { schema }) as unknown as Database;
   }
-  const pool = globalForDb.__calldeskPool ?? new Pool({ connectionString: env.DATABASE_URL, max: 5 });
+  const pool = globalForDb.__calldeskPool ?? new Pool(postgresConfig(env.DATABASE_URL, env.DATABASE_CA_CERT));
   globalForDb.__calldeskPool = pool;
   return drizzlePg(pool, { schema });
 }

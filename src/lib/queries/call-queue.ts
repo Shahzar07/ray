@@ -3,6 +3,7 @@ import { and, desc, eq, gte, inArray, lte, ne, notInArray, or, sql } from "drizz
 import { startOfDay, endOfDay } from "date-fns";
 import { db } from "@/lib/db/client";
 import { activities, leads, users } from "@/lib/db/schema";
+import { assertCanViewLead } from "@/lib/auth/visibility";
 import { CLOSED_STATUSES } from "@/lib/domain/constants";
 import { isInCallingWindow } from "@/lib/domain/dates";
 import { REASON_ORDER, type QueueReason } from "@/lib/domain/queue";
@@ -52,6 +53,7 @@ export async function buildCallQueue(
   teamId: string,
   options: { window: [number, number]; limit?: number; only?: QueueReason; leadId?: string },
 ): Promise<QueueLead[]> {
+  if (options.leadId) await assertCanViewLead(userId, options.leadId);
   const now = new Date();
 
   const mine = and(

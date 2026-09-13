@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, PhoneCall, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ClockControl } from "@/components/attendance/clock-control";
 import { Sidebar } from "./sidebar";
 import { CommandPalette } from "./command-palette";
 import { NotificationBell, type NotificationItem } from "./notification-bell";
@@ -88,6 +89,7 @@ export function AppShell({
   if (immersive) {
     return (
       <>
+        <div className="border-b border-line bg-surface px-4 py-2"><ClockControl /></div>
         {children}
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} role={ctx.role} />
       </>
@@ -118,6 +120,7 @@ export function AppShell({
       </header>
 
       <div className="lg:pl-[248px]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface px-4 py-3 sm:px-6"><span className="hidden text-[11px] font-semibold uppercase tracking-[.16em] text-subtle sm:block">Workspace / {ctx.team.name}</span><ClockControl /></div>
         <main className="min-h-[calc(100dvh-3.5rem)] pb-20 lg:min-h-dvh lg:pb-0">{children}</main>
       </div>
 

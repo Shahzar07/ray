@@ -40,7 +40,7 @@ export function Sidebar({
           <PhoneCall className="size-[17px]" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 leading-tight">
-          <div className="truncate text-[14px] font-semibold tracking-tight text-strong">CallDesk</div>
+          <div className="truncate text-[14px] font-semibold tracking-tight text-strong">Raynaters CRM</div>
           <div className="truncate text-[11px] text-subtle">{ctx.org.name}</div>
         </div>
       </div>
@@ -74,9 +74,9 @@ export function Sidebar({
                       href={item.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group relative flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors",
+                        "group relative flex h-10 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors",
                         active
-                          ? "bg-surface text-strong shadow-xs"
+                          ? "bg-accent-soft text-accent-text shadow-xs"
                           : "text-muted hover:bg-inset hover:text-strong",
                       )}
                     >

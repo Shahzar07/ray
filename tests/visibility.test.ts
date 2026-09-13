@@ -111,6 +111,7 @@ beforeAll(async () => {
     hina,
     outsider,
     leads: {
+      foreign: await makeLead(otherOrg!.id, outsideTeam!.id, outsider, "Foreign lead"),
       sara: await makeLead(org!.id, a!.id, sara, "Sara's lead"),
       usman: await makeLead(org!.id, a!.id, usman, "Usman's lead"),
       hina: await makeLead(org!.id, a!.id, hina, "Hina's lead"),
@@ -253,4 +254,10 @@ describe("assertCanManageTeam", () => {
   it("allows an owner anywhere in their org", async () => {
     await expect(assertCanManageTeam(f.owner, f.teamB, db)).resolves.toBe("owner");
   });
+});
+
+// Regression: ownership must never cross the organization boundary.
+it("an owner cannot read or mutate a foreign organization's lead", async () => {
+  expect((await leadAccess(f.owner, f.leads.foreign!, db)).canView).toBe(false);
+  await expect(assertCanEditLead(f.owner, f.leads.foreign!, db)).rejects.toThrow(PermissionError);
 });

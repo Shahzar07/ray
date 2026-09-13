@@ -4,6 +4,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { neon } from "@neondatabase/serverless";
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { migrate as migrateNeon } from "drizzle-orm/neon-http/migrator";
+import { postgresConfig } from "../src/lib/db/connection";
 import { Pool } from "pg";
 
 const url = process.env.DATABASE_URL;
@@ -14,7 +15,7 @@ async function main() {
   if (/neon\.(tech|build)/.test(url!)) {
     await migrateNeon(drizzleNeon(neon(url!)), { migrationsFolder: folder });
   } else {
-    const pool = new Pool({ connectionString: url });
+    const pool = new Pool(postgresConfig(url!, process.env.DATABASE_CA_CERT));
     await migrate(drizzle(pool), { migrationsFolder: folder });
     await pool.end();
   }

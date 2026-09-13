@@ -8,6 +8,7 @@
  *   pnpm db:seed -- --keep    # adds leads without wiping
  */
 import "dotenv/config";
+import { postgresConfig } from "../src/lib/db/connection";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import bcrypt from "bcryptjs";
@@ -32,7 +33,7 @@ const {
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env first.");
 
-const pool = new Pool({ connectionString: url });
+const pool = new Pool(postgresConfig(url!, process.env.DATABASE_CA_CERT));
 const db = drizzle(pool, { schema });
 
 const KEEP = process.argv.includes("--keep");

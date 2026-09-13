@@ -278,3 +278,14 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Raynaters workspace: calm surfaces, confident typography, emerald accents. */
+.crm-hero {
+  color: #f8fafc;
+  background: radial-gradient(ellipse at 90% 10%, #125448 0%, transparent 55%), #101d26;
+  border: 1px solid #254238;
+  box-shadow: 0 12px 32px -24px #0d342c;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
