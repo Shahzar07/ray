@@ -1,5 +1,24 @@
 # Raynaters CRM — attendance and reliability update
 
+## Follow-up: supplied Neon connection verified
+
+A user-supplied pooled Neon connection was tested read-only on 13 September 2026.
+The HTTPS Neon driver connected successfully to `neondb`, with no custom CA needed.
+The database has no `public.users`, `public.leads`, or `public.work_sessions` tables.
+Do not change production to this URL without explicitly deciding how to preserve or
+migrate the existing CRM data. No credentials are stored in this repository.
+
+Vercel production is still pinned to commit `396e6bc` on
+`claude/modern-dashboard-ui-srz84s`. Another branch,
+`claude/modern-dashboard-ui-okdhej` at `5141f3e`, documents the original Supabase
+connection and a previous fix for this exact TLS failure. It also contains additional
+CRM features. Those features must be considered before changing the production branch.
+
+The connected Vercel tools available in this session do not expose the production
+`DATABASE_URL` value. Confirm its hostname in Vercel before applying a provider-specific
+fix. The certificate instructions below are conditional on the actual deployed database
+using a private CA; they are not a requirement for the tested Neon endpoint.
+
 ## Confirmed production failure
 
 Vercel runtime logs for `raynaters-dashboard` show `SELF_SIGNED_CERT_IN_CHAIN`
