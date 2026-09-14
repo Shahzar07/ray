@@ -19,7 +19,7 @@ import { EmptyState, ProgressRing, SectionTitle, Sparkline, StatTile } from "@/c
 import { LeadQueueCard } from "@/components/today/lead-queue-card";
 import { fmt } from "@/lib/domain/dates";
 import { pctValue } from "@/lib/utils";
-import { hasDailyTargets } from "@/lib/domain/roles";
+import { can, hasDailyTargets } from "@/lib/domain/roles";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -58,6 +58,7 @@ export default async function TodayPage() {
         }
       />
 
+      <div className="border-b border-line bg-surface px-6 py-3 text-sm"><Link className="font-medium text-accent-text" href={can(ctx.role, "attendance.manage") ? "/attendance" : "/timesheet"}>{can(ctx.role, "attendance.manage") ? "View live team attendance and working hours →" : "View my daily timesheet →"}</Link></div>
       <PageBody className="space-y-6">
         {/* Targets */}
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

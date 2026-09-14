@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  Clock3,
+  Trophy,
   CalendarClock,
   KanbanSquare,
   LayoutGrid,
@@ -78,6 +80,11 @@ export const NAV: NavGroup[] = [
       { href: "/settings", label: "Settings", icon: Settings, shortcut: "g s", description: "Team, fields, DNC, profile" },
     ],
   },
+  { label: "Attendance", items: [
+    { href: "/attendance", label: "Team attendance", icon: Users, capability: "attendance.manage", description: "Live presence and working hours" },
+    { href: "/timesheet", label: "My timesheet", icon: Clock3, description: "Your daily work record" },
+    { href: "/leaderboard", label: "Leaderboard", icon: Trophy, description: "Team sales results" },
+  ] },
 ];
 
 export function navForRole(role: Role): NavGroup[] {

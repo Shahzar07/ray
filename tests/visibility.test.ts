@@ -125,6 +125,8 @@ beforeAll(async () => {
     viewer,
     outsider,
     leads: {
+      foreign: await makeLead(otherOrg!.id, outsideTeam!.id, outsider, "Foreign lead"),
+      foreignUnassigned: await makeLead(otherOrg!.id, outsideTeam!.id, null, "Foreign unassigned"),
       sara: await makeLead(org!.id, a!.id, sara, "Sara's lead"),
       usman: await makeLead(org!.id, a!.id, usman, "Usman's lead"),
       hina: await makeLead(org!.id, a!.id, hina, "Hina's lead"),
@@ -362,4 +364,13 @@ describe("viewer", () => {
     expect(access.canView).toBe(true);
     expect(access.canEdit).toBe(false);
   });
+});
+
+it("blocks cross-organization access, including unassigned leads", async () => {
+  for (const actor of [f.owner, f.manager]) {
+    for (const lead of [f.leads.foreign!, f.leads.foreignUnassigned!]) {
+      expect((await leadAccess(actor, lead, db)).canView).toBe(false);
+      await expect(assertCanEditLead(actor, lead, db)).rejects.toThrow(PermissionError);
+    }
+  }
 });

@@ -25,10 +25,10 @@ afterEach(() => {
 });
 
 describe("poolConfig", () => {
-  it("encrypts without demanding a chain pg cannot verify", () => {
+  it("keeps verification enabled without a custom CA", () => {
     // The regression itself: this used to resolve to `{}`, i.e. verify against
     // Node's trust store, which Supabase's self-signed pooler chain fails.
-    expect(resolvedSsl(SUPABASE)).toEqual({ rejectUnauthorized: false });
+    expect(resolvedSsl(SUPABASE)).toEqual({});
   });
 
   it("does not silently fall back to an unencrypted connection", () => {
@@ -50,9 +50,7 @@ describe("poolConfig", () => {
   it("honours an explicit request for a verified chain", () => {
     // Asking for verify-full and getting rejectUnauthorized:false would be the
     // library quietly weakening what the operator asked for.
-    expect(resolvedSsl("postgres://u:p@h:5432/db?sslmode=verify-full")).toEqual({
-      rejectUnauthorized: true,
-    });
+    expect(resolvedSsl("postgres://u:p@h:5432/db?sslmode=verify-full")).toEqual({});
   });
 
   it("leaves local development on plaintext, exactly as before", () => {
@@ -61,6 +59,7 @@ describe("poolConfig", () => {
   });
 
   it("strips sslmode wherever it sits in the query string", () => {
+    process.env.DATABASE_CA_CERT = "test-ca";
     const first = poolConfig("postgres://u:p@h:5432/db?sslmode=require&application_name=x");
     const last = poolConfig("postgres://u:p@h:5432/db?application_name=x&sslmode=require");
     expect(first.connectionString).toBe("postgres://u:p@h:5432/db?application_name=x");
