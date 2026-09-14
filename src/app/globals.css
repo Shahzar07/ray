@@ -278,3 +278,20 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.crm-hero {
+  color: #f8fafc;
+  background: radial-gradient(ellipse at 90% 10%, #125448 0%, transparent 55%), #101d26;
+  border: 1px solid #254238;
+  box-shadow: 0 12px 32px -24px #0d342c;
+}
+
+/*
+ * The hero paints its own dark ground in both themes, so its headings cannot
+ * inherit `color` — the base layer sets `h1..h4 { color: var(--text-strong) }`,
+ * and a matching selector always beats an inherited value. In the light theme
+ * that left every hero heading near-black on near-black. State the colour here.
+ */
+.crm-hero :is(h1, h2, h3, h4) {
+  color: #f8fafc;
+}

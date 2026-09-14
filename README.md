@@ -201,10 +201,10 @@ anything or spam anyone.
 
 ## Deploying
 
-`vercel-build` runs `scripts/migrate.ts` before `next build`, so migrations apply as part
-of the deploy and the database never lags the code that depends on it. With no
-`DATABASE_URL` set the migration step skips rather than failing, so builds without a
-database still work.
+`vercel-build` builds the application only. Apply reviewed migrations explicitly
+with `npm run db:migrate` before promoting a deployment that requires them. Preview
+builds must not modify production data. See [Supabase recovery](docs/SUPABASE-RECOVERY.md)
+for the original project, attendance migration and verification requirements.
 
 Targets (`daily_dial_target` / `daily_connect_target`) apply only to team leads and
 agents — the roles that work a book of leads. Everyone else stores zero and the UI shows

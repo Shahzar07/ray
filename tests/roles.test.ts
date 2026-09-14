@@ -113,3 +113,13 @@ describe("pending-migration errors", () => {
     expect(pendingMigrationMessage(new Error("connection reset"))).toBeNull();
   });
 });
+
+// Attendance does not inherit a viewer's old team-performance capability.
+describe("attendance privacy", () => {
+  it("restricts team hours to owners, managers, and team leads", () => {
+    expect(rolesWith("attendance.manage")).toEqual(["owner", "manager", "team_lead"]);
+  });
+  it("restricts aggregate analytics to management", () => {
+    expect(rolesWith("analytics.view")).toEqual(["owner", "manager", "team_lead"]);
+  });
+});

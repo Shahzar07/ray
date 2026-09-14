@@ -545,3 +545,20 @@ export type InterestLevel = (typeof interestLevelEnum.enumValues)[number];
 export type TrialStatus = (typeof trialStatusEnum.enumValues)[number];
 export type CallOutcome = (typeof callOutcomeEnum.enumValues)[number];
 export type ActivityType = (typeof activityTypeEnum.enumValues)[number];
+
+
+export const workSessions = pgTable("work_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  teamId: uuid("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  localDate: date("local_date").notNull(),
+  durationSeconds: integer("duration_seconds"),
+  source: text("source").notNull().default("manual"),
+}, (t) => [
+  index("work_sessions_user_date_idx").on(t.userId, t.localDate),
+  index("work_sessions_team_date_idx").on(t.teamId, t.localDate),
+  uniqueIndex("work_sessions_one_open_per_user").on(t.userId).where(sql`${t.endedAt} is null`),
+]);

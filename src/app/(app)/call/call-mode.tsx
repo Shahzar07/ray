@@ -150,7 +150,7 @@ export function CallMode({
 
   if (!lead) {
     return (
-      <div className="flex min-h-dvh flex-col bg-canvas">
+      <div className="flex min-h-full flex-1 flex-col bg-canvas">
         <TopBar session={session} startedWith={startedWith} targets={targets} remaining={0} />
         <div className="flex flex-1 items-center justify-center p-6">
           <EmptyState
@@ -183,7 +183,7 @@ export function CallMode({
   const day = lead.trialStartedAt ? trialDay(lead.trialStartedAt) : null;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-canvas">
+    <div className="flex min-h-full flex-1 flex-col bg-canvas">
       <TopBar session={session} startedWith={startedWith} targets={targets} remaining={remaining} />
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pb-4 pt-3 sm:px-6">

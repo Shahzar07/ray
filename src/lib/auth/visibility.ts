@@ -105,6 +105,8 @@ export async function leadAccess(
 
   const role: Role | null = membership?.role ?? (await orgWideMembership(userId, db))?.role ?? null;
   if (!role) return deny;
+  const allowedScope = await visibleUserIds(userId, lead.teamId, db);
+  if (!allowedScope.length) return deny;
 
   const allowed = await visibleUserIds(userId, lead.teamId, db);
   const canView = lead.assignedTo === null || allowed.includes(lead.assignedTo);
@@ -189,6 +191,7 @@ export async function assertCanManageTeam(
  * vague one.
  */
 const DENIAL: Record<Capability, string> = {
+  "attendance.manage": "Only managers can view team attendance.",
   "leads.view": "You do not have access to these leads.",
   "leads.editOwn": "Your role is read-only.",
   "leads.manageAll": "You cannot reassign or delete other people's leads.",

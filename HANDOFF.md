@@ -146,28 +146,16 @@ Only two things from the brief remain, both deliberately left last.
    or write queue. The brief wants a caller in a weak-signal spot to keep their note.
    Ask before adding `next-pwa` — it is outside the brief's stack list.
 
-- **Migrations run on deploy.** `vercel-build` is `tsx scripts/migrate.ts && next build`,
-  so a schema change ships with the code that needs it. This is not a convenience: the
-  manager/researcher/viewer roles went out ahead of their migration once, and every role
-  change in production failed with `invalid input value for enum role: "manager"`
-  surfaced to the user as "Something went wrong. Try again." `src/lib/actions/db-errors.ts`
-  now translates that class of error into "a migration is pending", and the migration
-  script skips (exit 0) rather than failing when no database is configured, so a build
-  without one still works.
+- **Recovery update: migrations are a separate cutover step.** `vercel-build`
+  now runs `next build` only. Apply reviewed migrations explicitly before promoting
+  production; a preview build must not mutate its shared database. See
+  `docs/SUPABASE-RECOVERY.md` for the attendance integration and live prerequisites.
 
 ### Smaller things worth knowing
-- **TLS to Supabase is resolved in code, not by the URL** (`src/lib/db/ssl.ts`). This
-  is not a preference — it is a bug fix, and reverting it 500s every page that touches
-  the database. node-postgres merges the parsed connection string *over* the options you
-  pass, so `sslmode=require` in `DATABASE_URL` silently discards any `ssl` object set in
-  code; the chain then gets verified against Node's trust store, which Supabase's
-  self-signed pooler certificate fails with `SELF_SIGNED_CERT_IN_CHAIN`. Stripping
-  `sslmode` alone is not enough either — with neither, the driver yields `ssl: false`,
-  i.e. no TLS, which the pooler refuses. `poolConfig()` does both halves and every pool
-  in the repo goes through it. `tests/db-ssl.test.ts` pins it by asserting on what `pg`
-  actually resolves, not on what we hand it. Set `DATABASE_CA_CERT` (Supabase → Project
-  settings → Database → SSL configuration) to upgrade from encrypted-only to a fully
-  verified chain.
+- **TLS to Supabase requires a trusted chain.** `poolConfig()` now delegates to
+  the shared verified connection builder. Set `DATABASE_CA_CERT` to the provider's
+  root PEM certificate. URL SSL parameters cannot override that explicit CA.
+  The prior `rejectUnauthorized: false` fallback is not restored.
 - **Two lockfiles, one decision outstanding.** The repo commits `package-lock.json` but
   every script is `pnpm`, so `pnpm install` drops a `pnpm-lock.yaml` beside it. That is
   now gitignored, which changes nothing about the build and keeps `package-lock.json`

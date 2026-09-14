@@ -38,7 +38,27 @@ async function main() {
   console.log("✔ migrations applied");
 }
 
+/**
+ * A failed migration blocks a production deploy and nothing else.
+ *
+ * Production must never serve code whose schema is missing — that is how the
+ * roles enum shipped ahead of its migration, and how attendance would ship
+ * without work_sessions. So there, a failure is fatal and the deploy stops
+ * with production left untouched.
+ *
+ * Preview and development databases are a different matter: they go stale, get
+ * paused, or were never provisioned. Blocking every preview build on one is
+ * how this step came to be removed from `vercel-build` in the first place. So
+ * outside production the failure is loud but not fatal — the preview still
+ * builds, and any missing table shows up plainly when the page is opened.
+ */
 main().catch((error) => {
+  const fatal = process.env.VERCEL_ENV === "production" || !process.env.VERCEL;
   console.error("✘ migration failed:", error);
-  process.exit(1);
+  if (fatal) process.exit(1);
+  console.error(
+    `• VERCEL_ENV=${process.env.VERCEL_ENV} — continuing the build anyway.\n` +
+      "  This preview will fail at runtime on any table the migration would have\n" +
+      "  created. Point DATABASE_URL/DIRECT_URL at a reachable database to fix it.",
+  );
 });

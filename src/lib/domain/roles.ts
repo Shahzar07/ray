@@ -19,6 +19,7 @@ export const ROLES = ["owner", "manager", "team_lead", "agent", "researcher", "v
 
 export type Capability =
   /** See the lead surfaces at all. */
+  | "attendance.manage"
   | "leads.view"
   /** Log a call, write a note, edit a lead assigned to you. */
   | "leads.editOwn"
@@ -44,6 +45,7 @@ export type Capability =
   | "org.admin";
 
 const ALL: Capability[] = [
+  "attendance.manage",
   "leads.view",
   "leads.editOwn",
   "leads.manageAll",
@@ -78,7 +80,6 @@ const CAPABILITIES: Record<Role, ReadonlySet<Capability>> = {
     "leads.editOwn",
     "leads.export",
     "calls.log",
-    "analytics.view",
   ]),
 
   /* Builds and cleans the lists. Imports, curates fields and the DNC register,
@@ -93,7 +94,7 @@ const CAPABILITIES: Record<Role, ReadonlySet<Capability>> = {
 
   /* Read-only, and genuinely read-only: no export either, because a CSV of
      every lead is not "viewing". */
-  viewer: new Set<Capability>(["leads.view", "analytics.view", "team.performance"]),
+  viewer: new Set<Capability>(["leads.view"]),
 };
 
 export function can(role: Role, capability: Capability): boolean {
