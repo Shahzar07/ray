@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: "Lead management and cold-call tracking for small outbound sales teams.",
   applicationName: APP_NAME,
   manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: APP_NAME },
   formatDetection: { telephone: false },
 };

@@ -91,11 +91,13 @@ export function AppShell({
 
   if (immersive) {
     return (
-      <>
-        <div className="border-b border-line bg-surface px-4 py-2"><ClockControl /></div>
-        {children}
+      <div className="flex h-dvh flex-col overflow-hidden">
+        <div className="shrink-0 border-b border-line bg-surface px-4 py-1.5">
+          <ClockControl compact />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} role={ctx.role} />
-      </>
+      </div>
     );
   }
 
