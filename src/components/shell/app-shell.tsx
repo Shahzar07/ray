@@ -88,11 +88,13 @@ export function AppShell({
 
   if (immersive) {
     return (
-      <>
-        <div className="border-b border-line bg-surface px-4 py-2"><ClockControl /></div>
-        {children}
+      <div className="flex h-dvh flex-col overflow-hidden">
+        <div className="shrink-0 border-b border-line bg-surface px-4 py-1.5">
+          <ClockControl compact />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} role={ctx.role} />
-      </>
+      </div>
     );
   }
 
@@ -109,7 +111,7 @@ export function AppShell({
           <span className="grid size-7 place-items-center rounded-lg bg-accent text-accent-fg">
             <PhoneCall className="size-4" strokeWidth={2.4} />
           </span>
-          <span className="text-[14px] font-semibold tracking-tight text-strong">CallDesk</span>
+          <span className="text-[14px] font-semibold tracking-tight text-strong">Raynaters CRM</span>
         </Link>
         <div className="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="icon-sm" onClick={() => setCommandOpen(true)} aria-label="Search">

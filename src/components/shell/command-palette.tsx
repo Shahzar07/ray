@@ -230,7 +230,7 @@ export function CommandPalette({
               open
             </span>
             <span className="ml-auto flex items-center gap-1.5">
-              <PhoneCall className="size-3" /> CallDesk
+              <PhoneCall className="size-3" /> Raynaters CRM
             </span>
           </div>
         </DialogPrimitive.Content>

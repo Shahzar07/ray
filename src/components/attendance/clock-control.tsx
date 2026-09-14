@@ -6,7 +6,11 @@ import { attendanceStatus, clockIn, clockOut } from "@/lib/actions/attendance";
 import { elapsedSeconds, formatDuration } from "@/lib/domain/attendance";
 import { Button } from "@/components/ui/button";
 
-export function ClockControl() {
+/**
+ * `compact` is for Call Mode, which owns exactly one viewport: the row must
+ * stay a single line so it never steals height from the outcome buttons.
+ */
+export function ClockControl({ compact = false }: { compact?: boolean } = {}) {
   const router = useRouter();
   const [session, setSession] = useState<{
     id: string;
@@ -54,9 +58,11 @@ export function ClockControl() {
     return () => clearInterval(timer);
   }, [offset]);
   return (
-    <div className="flex flex-wrap items-center gap-3 text-sm">
+    <div
+      className={`flex items-center gap-3 text-sm ${compact ? "min-w-0" : "flex-wrap"}`}
+    >
       <span
-        className={`flex items-center gap-2 ${session ? "text-success-text" : "text-muted"}`}
+        className={`flex min-w-0 items-center gap-2 ${session ? "text-success-text" : "text-muted"}`}
       >
         <Clock3 className="size-4" />
         <span className="font-medium tabular-nums">
@@ -102,7 +108,7 @@ export function ClockControl() {
         {pending ? "Saving…" : session ? "Check out" : "Check in"}
       </Button>
       {error && (
-        <span role="status" className="text-xs text-danger-text">
+        <span role="status" className="truncate text-xs text-danger-text">
           {error}{" "}
           <button className="underline" onClick={() => void refresh()}>
             Retry

@@ -11,13 +11,11 @@ import {
   Inbox,
   MessageCircle,
   PhoneCall,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/controls";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, TrialBadge } from "@/components/ui/display";
-import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/overlays";
 import { fmtDate, relative } from "@/lib/domain/dates";
 import { formatPhone, telHref, whatsAppHref } from "@/lib/domain/phone";
@@ -299,15 +297,7 @@ export function LeadsTable({
         <EmptyState
           icon={<Inbox />}
           title="No leads match this view"
-          description="Loosen a filter, or bring a scraped sheet in from the importer to fill the queue."
-          action={
-            <Button variant="primary" size="sm" asChild>
-              <a href="/import">
-                <Sparkles />
-                Import a sheet
-              </a>
-            </Button>
-          }
+          description="Loosen a filter to widen the search. Importing a scraped sheet is not available yet."
         />
       </div>
     );

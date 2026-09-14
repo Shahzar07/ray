@@ -147,7 +147,7 @@ export default async function TodayPage() {
             leads={board.trialsEnding}
             tz={ctx.user.timezone}
             empty="No demo weeks closing just yet."
-            cta="/trials"
+            cta="/call?view=trial"
           />
 
           <Section
@@ -158,7 +158,7 @@ export default async function TodayPage() {
             leads={board.trialsPending}
             tz={ctx.user.timezone}
             empty="Every finished trial has a decision on it."
-            cta="/trials"
+            cta="/call?view=trial"
           />
         </div>
 

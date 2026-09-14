@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   description: "Lead management and cold-call tracking for small outbound sales teams.",
   applicationName: "Raynaters CRM",
   manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Raynaters CRM" },
   formatDetection: { telephone: false },
 };

@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <span className="grid size-8 place-items-center rounded-[10px] bg-accent text-accent-fg shadow-xs edge-light">
               <PhoneCall className="size-[17px]" strokeWidth={2.4} />
             </span>
-            <span className="text-[15px] font-semibold tracking-tight text-strong">CallDesk</span>
+            <span className="text-[15px] font-semibold tracking-tight text-strong">Raynaters CRM</span>
           </div>
           <ThemeToggle />
         </header>

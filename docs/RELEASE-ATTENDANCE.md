@@ -60,6 +60,7 @@ relevant environment. Never use the leaf certificate from an untrusted connectio
 - Live manager refresh every 30 seconds; long open shifts show a review message.
 - Attendance outages do not prevent using the CRM.
 - Leaderboard route with no attendance data. Analytics navigation restricted to managers.
+- Coverage tests that fail if navigation points at a route the app does not serve.
 - Friendly retry screens for route failures.
 - Fixed cross-organization owner lead access and direct Call Mode lead access bypass.
 - Leaderboard aggregation now explicitly filters the selected team.
@@ -74,11 +75,43 @@ Open shifts are flagged after 12 hours; they are not automatically shortened bas
 sales activity. Managers should follow up on those records before using totals.
 
 The pre-existing unfinished `/analytics`, `/board`, `/trials`, `/import`, and `/settings`
-screens remain outside this update. Their original navigation links remain present.
+screens remain outside this update. Their navigation entries are still listed, but as
+non-navigating "Soon" items — see Post-release fixes below.
+
+## Post-release fixes
+
+Runtime review against a seeded Postgres found four defects that the type checker
+and the production build both pass over. All four are fixed and covered by tests.
+
+- **Hero headings were invisible in the light theme.** `.crm-hero` set `color` on
+  the container, but the base layer styles `h1..h4` directly and a matching
+  selector always beats an inherited value — so the new Raynaters headings on
+  `/today` and `/team` rendered near-black on the hero's near-black ground.
+  Heading colour is now stated on `.crm-hero :is(h1, h2, h3, h4)`.
+- **Call Mode no longer fitted one viewport.** The global check-in bar was stacked
+  above a `min-h-dvh` child, so the page ran 49px past the fold on desktop and
+  167px on a 390px phone, pushing the call-outcome buttons off-screen. The
+  immersive shell is now a `h-dvh` flex column with a `shrink-0` bar and a
+  `min-h-0 flex-1` content area; Call Mode uses `min-h-full`. Measured overflow is
+  now 0px at both sizes, with "Answered" visible without scrolling.
+- **Navigation pointed at five routes that do not exist.** `/board`, `/trials`,
+  `/analytics`, `/import` and `/settings` 404ed on click, and Next prefetched all
+  five 404s on every page load. They now render as non-navigating "Soon" entries,
+  are excluded from ⌘K and the g-shortcuts, and bind no keys. The same dead links
+  in the Today trial sections, the leads empty state and the user menu are
+  repointed or disabled. A `not-found.tsx` handles any stale URL.
+- **The rebrand was half-applied.** The mobile header, login page, ⌘K footer,
+  shortcut dialog and setup error still said "CallDesk" while the sidebar and
+  `<title>` said "Raynaters CRM".
+
+The attendance layer itself needed no changes: check-in, check-out, the partial
+unique index, cross-tab BroadcastChannel sync, timezone-local dates, manager
+access control and the agent redirect off `/team` all behaved correctly under
+browser testing.
 
 ## Verification
 
-33 Vitest tests passed against isolated PGlite PostgreSQL through node-postgres.
+44 Vitest tests passed against PostgreSQL 16 through node-postgres.
 Coverage includes concurrent check-in, stale check-out, ownership of sessions, persisted
 records, linked-agent manager denial, cross-org lead access, TLS configuration, local
 midnight, DST and month validation. Migrations were applied twice successfully.
@@ -87,5 +120,10 @@ verify the production provider's TLS chain; that requires the configured provide
 
 Authenticated HTTP smoke tests passed for `/today`, `/team`, `/timesheet`,
 `/leaderboard`, `/leads`, and `/call`. Direct `/team` requests by an agent redirect
-to `/today`, and anonymous requests redirect to login. Browser visual verification
-could not complete because the local browser runtime failed to start in this environment.
+to `/today`, and anonymous requests redirect to login.
+
+Browser verification now completes. Every route above was driven in headless
+Chromium as owner, team lead and agent, in light and dark themes at 1440px and
+390px: check-in, check-out, cross-tab sync, the manager timesheet tab and CSV
+export all work, and the console and network logs are clean — no page errors and
+no failed requests for any role.

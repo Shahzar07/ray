@@ -68,6 +68,26 @@ export function Sidebar({
             <ul className="space-y-0.5">
               {group.items.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                // No route behind it yet — show the plan, never navigate there.
+                if (item.soon) {
+                  return (
+                    <li key={item.href}>
+                      <span
+                        aria-disabled="true"
+                        title={`${item.description} — not built yet`}
+                        className="group relative flex h-10 cursor-default items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium text-subtle/70"
+                      >
+                        <item.icon className="size-[15px] shrink-0 text-subtle/70" />
+                        <span className="flex-1 truncate">{item.label}</span>
+                        <span className="rounded-full border border-line px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide text-subtle">
+                          Soon
+                        </span>
+                      </span>
+                    </li>
+                  );
+                }
+
                 return (
                   <li key={item.href}>
                     <Link
@@ -118,11 +138,12 @@ export function Sidebar({
               <RoleBadge role={ctx.role} size="xs" />
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/settings/profile">
-                <UserRound />
-                Profile & preferences
-              </Link>
+            <DropdownMenuItem disabled>
+              <UserRound />
+              Profile &amp; preferences
+              <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-subtle">
+                Soon
+              </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <form action={signOutAction} className="contents">
