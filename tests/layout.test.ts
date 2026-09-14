@@ -63,3 +63,18 @@ describe("Schema ships with the code that needs it", () => {
     expect(pkg.scripts["vercel-build"]).toContain("next build");
   });
 });
+
+describe("A missing schema blocks production and only production", () => {
+  const script = read("scripts/migrate.ts");
+
+  it("stops a production deploy when migrations fail", () => {
+    // Shipping code whose tables do not exist is the failure this guards.
+    expect(script).toContain('process.env.VERCEL_ENV === "production"');
+    expect(script).toContain("process.exit(1)");
+  });
+
+  it("does not block a preview on a stale preview database", () => {
+    // Blocking every preview is why this step was dropped from vercel-build.
+    expect(script).toMatch(/if \(fatal\) process\.exit\(1\)/);
+  });
+});
